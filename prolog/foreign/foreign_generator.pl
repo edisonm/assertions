@@ -144,7 +144,7 @@ intermediate_obj(M, DirSO, OptL, LibL, Source, Object) -->
 intermediate_obj(_, _, _, _, Source, Source) --> [].
 
 intermediate_obj_cmd(Ext, Name, M, DirSO, OptL, Source, Object, Compiler-Args) :-
-    % Add a preffix to avoid problems with other files with the same base
+    % Add a prefix to avoid problems with other files with the same base
     atomic_list_concat([Name, '_', Ext], NameFor),
     file_name_extension(NameFor, o, NameO),
     directory_file_path(DirSO, NameO, Object),
