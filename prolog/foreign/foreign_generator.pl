@@ -1029,6 +1029,19 @@ bind_tn_clause(MType, MPropL, Dict) :-
     sequence_list(Body, PropL, []),
     maplist(cond_qualify_with(CM), PropL, MPropL).
 
+ds_union_ini(SubType, Name, TPDL1) -->
+    { TPDL1 = [TPD1|_],
+      TPD1 = t(Type1, _, _, _),
+      Type1 =.. Args1,
+      append(Left, [_], Args1),
+      append(Left, ["NUM"], ArgsN),
+      TypeN =.. ArgsN,
+      TPDN = t(TypeN, _, _, _),
+      append(TPDL1, [TPDN], TPDL),
+      !
+    },
+    foldil(ds_union_ini_1(SubType, Name), 0, TPDL).
+
 ds_union_ini_1(SubType, Name, Idx, t(Type, _, _, _)) -->
     { functor(Type, _, N),
       arg(N, Type, Term),
@@ -1055,7 +1068,7 @@ sanitize_csym([C|L], S1) -->
 
 declare_struct_union_ini(union, Spec, TPDL, Name) -->
     ["typedef enum {"],
-    foldil(ds_union_ini_1(union, Name), 0, TPDL),
+    ds_union_ini(union, Name, TPDL),
     ["} "+Name+"_utype;"],
     {ctype_ini(Spec, Decl)},
     [Decl+" {",
@@ -1067,7 +1080,7 @@ declare_struct_union_ini(struct, _, _, _) --> [].
 declare_struct_union_ini(enum, Spec, TPDL, Name) -->
     {ctype_ini(Spec, CIni)},
     [CIni+" {"],
-    foldil(ds_union_ini_1(enum, Name), 0, TPDL),
+    ds_union_ini(enum, Name, TPDL),
     {ctype_end(Spec, CEnd)},
     ["}"+CEnd+";"].
 
