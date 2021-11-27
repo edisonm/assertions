@@ -229,8 +229,8 @@ do_generate_wrapper(M, AliasSO, AliasSOPl, File) :-
                           ["",
                            (:- use_foreign_library(AliasSO)),
                            % make these symbols public:
-                           (:- shlib:current_library(AliasSO, _, F1, IModule, _),
-                               open_shared_object(F1, _Handle, [global]))],
+                           (:- initialization(( shlib:current_library(AliasSO, _, F1, IModule, _),
+                                                open_shared_object(F1, _Handle, [global])), now))],
                           findall((Head :- Body),
                                   ( member(F/A, IntfPIL),
                                     A > MaxFLIArgs,

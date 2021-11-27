@@ -108,9 +108,6 @@
     doc_db/4,
     nodirective_error_hook/1.
 
-:- discontiguous
-    term_expansion/2.
-
 %  These predicates are intended not to be called directly by user-applications:
 
 :- public
