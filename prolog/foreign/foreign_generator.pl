@@ -41,6 +41,7 @@
 :- use_module(library(filesex)).
 :- use_module(library(assertions)).
 :- use_module(library(atomics_atom)).
+:- use_module(library(codegen)).
 :- use_module(library(call_ref)).
 :- use_module(library(camel_snake)).
 :- use_module(library(extend_args)).
@@ -150,13 +151,6 @@ intermediate_obj_cmd(Ext, Name, M, DirSO, OptL, Source, Object, Compiler-Args) :
     directory_file_path(DirSO, NameO, Object),
     append([OptL, ['-c', Source, '-o', Object]], FOptL),
     language_command(Ext, M, Compiler, Args, FOptL).
-
-is_newer(File1, File2) :-
-    exists_file(File1),
-    exists_file(File2),
-    time_file(File1, Time1),
-    time_file(File2, Time2),
-    Time1 > Time2.
 
 generate_library(M, AliasSO, AliasSOPl, InitL, File) :-
     absolute_file_name(AliasSO, FileSO, [file_type(executable),
@@ -330,54 +324,6 @@ command_to_string(Command, ArgL, CommandS) :-
     ; RCommand = Command
     ),
     atomic_list_concat([RCommand|ArgL], ' ', CommandS).
-
-:- meta_predicate with_output_to_file(+,0 ).
-
-with_output_to_file(File, Goal) :- setup_call_cleanup(tell(File), Goal, told).
-
-write_lines([]) :- !.
-write_lines([E|L]) :- !,
-    write_lines(E),
-    write_lines(L).
-write_lines(Line) :-
-    write_line(Line).
-
-write_line(Line) :-
-    ( nonvar(Line),
-      do_write_line_2(Line)
-    ->true
-    ; writeln(Line)
-    ).
-
-write_line_1(Line) :-
-    ( nonvar(Line),
-      do_write_line_1(Line)
-    ->true
-    ; write(Line)
-    ).
-
-do_write_line_1(F-A) :-
-    format(F, A).
-do_write_line_1(A+B) :-
-    write_line_1(A),
-    write_line_1(B).
-do_write_line_1(A/S) :-
-    maplist(line_atom, [S|A], [C|L]),
-    atomic_list_concat(L, C, V),
-    write(V).
-
-line_atom(Line, Atom) :- with_output_to(atom(Atom), write_line_1(Line)).
-
-do_write_line_2((:- A))    :- portray_clause((:- A)).
-do_write_line_2((A :- B))  :- portray_clause((A :- B)).
-do_write_line_2((A --> B)) :- portray_clause((A --> B)).
-do_write_line_2(Line) :- write_line_1(Line), nl.
-
-:- meta_predicate save_to_file(+,2).
-
-save_to_file(File, Goal) :-
-    call(Goal, Lines, []),
-    with_output_to_file(File, write_lines(Lines)).
 
 generate_foreign_interface(Module, FilePl, IntL, BaseFile) :-
     atom_concat(BaseFile, '_impl', BaseFileImpl),

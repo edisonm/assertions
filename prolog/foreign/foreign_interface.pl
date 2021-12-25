@@ -37,6 +37,7 @@
 :- use_module(library(assertions)).
 :- use_module(library(foreign/foreign_generator)).
 :- use_module(library(change_alias)).
+:- use_module(library(codegen)).
 :- reexport(library(compound_expand)).
 
 term_expansion((:- gen_foreign_library(AliasSO)),
@@ -86,7 +87,3 @@ term_expansion(end_of_file, Decl) :-
     change_alias(add_suffix('_so'), AliasSO, AliasSOPl),
     generate_library(M, AliasSO, AliasSOPl, InitL, File),
     Decl = [(:- [AliasSOPl]), end_of_file].
-
-add_suffix(Suffix, Name1, Name) :-
-    file_name_extension(Name2, _, Name1),
-    atom_concat(Name2, Suffix, Name).
