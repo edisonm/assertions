@@ -73,6 +73,7 @@
            user_output/2
           ]).
 
+:- use_module(library(choicepoints)).
 :- use_module(library(assertions)).
 :- use_module(library(intercept)).
 :- use_module(library(metaprops)).
@@ -268,13 +269,7 @@ non_det(Goal) :-
 :- global no_choicepoints/1.
 
 no_choicepoints(Goal) :-
-    prolog_current_choice(C1),
-    Goal,
-    prolog_current_choice(C2),
-    ( C2 == C1
-    ->true
-    ; send_comp_rtcheck(Goal, no_choicepoints, has_choicepoints)
-    ).
+    no_choicepoints(Goal, send_comp_rtcheck(Goal, no_choicepoints, has_choicepoints)).
 
 %!  has_choicepoints(:Goal)
 %
@@ -283,13 +278,7 @@ no_choicepoints(Goal) :-
 :- global has_choicepoints/1.
 
 has_choicepoints(Goal) :-
-    prolog_current_choice(C1),
-    Goal,
-    prolog_current_choice(C2),
-    ( C2 == C1
-    ->send_comp_rtcheck(Goal, has_choicepoints, no_choicepoints)
-    ; true
-    ).
+    has_choicepoints(Goal, send_comp_rtcheck(Goal, has_choicepoints, no_choicepoints)).
 
 %!  num_solutions_eq(Num:int, :Goal)
 %

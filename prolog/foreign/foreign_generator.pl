@@ -201,7 +201,6 @@ max_fli_args(10 ).
 
 do_generate_wrapper(M, AliasSO, AliasSOPl, File) :-
     max_fli_args(MaxFLIArgs),
-    necks,
     findall(F/A, ( current_foreign_prop(Head, M, _, _, Glob),
                    arg(1, Glob, Opts),
                    \+ ( nmember(lang(Lang), Opts),
@@ -436,7 +435,6 @@ write_register_sentence(_, M, CM, PredName, Arity, BindName, Line) :-
 
 write_register_foreign_native(M, CM, PredName, Arity, BindName, L) :-
     max_fli_args(MaxFLIArgs),
-    necks,
     ( M == CM
     ->L1="    PL_register_foreign("
     ; L1="    PL_register_foreign_in_module(\""+M+"\","
@@ -1311,7 +1309,6 @@ fetch_kv_prop_arg(Key, CM, Value, PropL, M:Prop) :-
 
 declare_intf_head(PCN, Head, "foreign_t __aux_pfa_"+PCN+"_"+N+"(term_t __args)") :-
     max_fli_args(MaxFLIArgs),
-    necks,
     functor(Head, _, N),
     N > MaxFLIArgs,
     !.
