@@ -44,7 +44,7 @@
            fails/1,
            failure/1,
            fi/2,
-           have_choicepoints/1,
+           has_choicepoints/1,
            is_det/1,
            iso/1,
            meta_modes/1,
@@ -273,21 +273,21 @@ no_choicepoints(Goal) :-
     prolog_current_choice(C2),
     ( C2 == C1
     ->true
-    ; send_comp_rtcheck(Goal, no_choicepoints, have_choicepoints)
+    ; send_comp_rtcheck(Goal, no_choicepoints, has_choicepoints)
     ).
 
-%!  have_choicepoints(:Goal)
+%!  has_choicepoints(:Goal)
 %
 %   Goal leave choicepoints on exit
 
-:- global have_choicepoints/1.
+:- global has_choicepoints/1.
 
-have_choicepoints(Goal) :-
+has_choicepoints(Goal) :-
     prolog_current_choice(C1),
     Goal,
     prolog_current_choice(C2),
     ( C2 == C1
-    ->send_comp_rtcheck(Goal, have_choicepoints, no_choicepoints)
+    ->send_comp_rtcheck(Goal, has_choicepoints, no_choicepoints)
     ; true
     ).
 
