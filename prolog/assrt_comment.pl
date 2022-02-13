@@ -40,6 +40,8 @@
 
 :- create_prolog_flag(assrt_comment, yes, [type(atom)]).
 
+:- meta_predicate  with_acp(0, -, +).
+
 % Don't reinvent the wheel, use pldoc and the mode/2 information.
 
 with_acp(Goal, OldFlag, NewFlag) :-
