@@ -47,7 +47,6 @@
 :- discontiguous '$exported_op'/3.
 :- use_module(library(compound_expand)).
 :- reexport(library(assertions_op)).
-
 :- use_module(library(extend_args)).
 :- use_module(library(apply)).
 :- use_module(library(pairs)).
