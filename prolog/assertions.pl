@@ -56,7 +56,6 @@
 :- use_module(library(list_sequence)).
 :- use_module(library(termpos)).
 :- use_module(library(neck)).
-:- use_module(library(subpos_utils)).
 :- use_module(library(prolog_codewalk), []).
 
 /** <module> Assertion reader for SWI-Prolog
