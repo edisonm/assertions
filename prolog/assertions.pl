@@ -924,7 +924,11 @@ term_expansion_decl(Decl, PPos, Records, RPos) :-
     nonvar(PPos),
     PPos = parentheses_term_position(_, _, Pos), !,
     term_expansion_decl(Decl, Pos, Records, RPos).
-term_expansion_decl(Decl, term_position(_, _, _, _, [DPos]), Records, RPos) :-
+term_expansion_decl(Decl, PPos, Records, RPos) :-
+    ( nonvar(PPos)
+    ->PPos = term_position(_, _, _, _, [DPos])
+    ; true
+    ),
     expand_assertion(Decl, DPos, Records, RPos).
 
 term_expansion((:- Decl), DPos, Records, RPos) :-
