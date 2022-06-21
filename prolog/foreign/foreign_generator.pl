@@ -54,9 +54,11 @@
 :- use_module(library(neck)).
 :- use_module(library(nmember)).
 :- use_module(library(process)).
+:- use_module(library(readutil)).
 :- use_module(library(solution_sequences)).
 :- use_module(library(substitute)).
 :- use_module(library(terms)).
+:- use_module(library(thread)).
 :- use_module(library(transpose)).
 :- use_module(library(pairs)).
 
@@ -101,7 +103,7 @@ foreign_dependency(_, library('foreign/foreign_swipl.h')).
 command_to_atom(Command, Args, Atom) :-
     process_create(path(Command), Args, [stdout(pipe(Out))]),
     read_stream_to_codes(Out, String),
-    string_to_atom(String, Atom).
+    atom_string(Atom, String).
 
 language_command(for, M, path(gfortran), ValueL, ValueT) :-
     command_to_atom(swipl, ['--dump-runtime-variables'], Atom),
