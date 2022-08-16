@@ -382,7 +382,8 @@ is_decl_global(Head, Status, Type, M) :-
     !.
 
 :- add_termpos(current_decomposed_assertion(+,?,?,?,?,?,?,?,?,-,?)).
-:- add_termpos(current_decomposed_assertion_(+,?,?,?,?,?,?,?,?,-,?)).
+:- add_termpos(current_decomposed_assertion_1(+,?,?,?,-,?,?,-,?)).
+:- add_termpos(current_decomposed_assertion_2(+,?,?,?,-,?,?,-,?)).
 :- add_termpos(propdef(+,?,?,?)).
 :- add_termpos(merge_comments(-,-,+)).
 :- add_termpos(decompose_assertion_head_body(+,?,?,+,?,?,?,?,-,?)).
@@ -395,28 +396,32 @@ merge_comments(C,  "",       C).
 merge_comments(C1, C2, [C1, C2]).
 
 current_decomposed_assertion(Assertions, PPos, M, Pred, Status, Type, Cp, Ca, Su, Gl, Co, CoPos, RPos) :-
-    cleanup_parentheses(PPos, APos),
-    current_decomposed_assertion_(Assertions, APos, M, Pred, Status, Type, Cp, Ca, Su, Gl, Co, CoPos, RPos).
+    current_decomposed_assertion_1(Assertions, PPos, M, Status, Type, BodyS, BSPos, Gl, Gl2, Co, CoPos, RPos),
+    decompose_assertion_head_body(BodyS, BSPos, M, Pred, true, _, Cp, Ca, Su, Gl2, Co, CoPos, RPos),
+    validate_body_sections(Type, Cp, Ca, Su, Gl, MustBeEmpty, MustNotBeEmpty),
+    maplist(report_must_be_empty(Type), MustBeEmpty),
+    maplist(report_must_not_be_empty(Type, RPos), MustNotBeEmpty).
 
-current_decomposed_assertion_(AssertionsBGl, M, Pred, Status, Type, Cp, Ca, Su, Gl, Co, RPos) :-
+current_decomposed_assertion_1(Assertions, PPos, M, Status, Type, BodyS, BSPos, Gl1, Gl, Co, CoPos, RPos) :-
+    cleanup_parentheses(PPos, APos),
+    current_decomposed_assertion_2(Assertions, APos, M, Status, Type, BodyS, BSPos, Gl1, Gl, Co, CoPos, RPos).
+
+current_decomposed_assertion_2(AssertionsBGl, M, Status, Type, BodyS, Gl1, Gl, Co, RPos) :-
     member(AssertionsBGl, [Assertions  + BGl,
                            Assertions is BGl]),
     necki,
-    propdef(BGl, M, Gl, Gl1),
-    current_decomposed_assertion(Assertions, M, Pred, Status, Type, Cp, Ca, Su, Gl1, Co, RPos).
-current_decomposed_assertion_(Assertions # Co2, M, Pred, Status, Type, Cp, Ca, Su, Gl, Co, RPos) :-
+    propdef(BGl, M, Gl1, Gl2),
+    current_decomposed_assertion_1(Assertions, M, Status, Type, BodyS, Gl2, Gl, Co, RPos).
+current_decomposed_assertion_2(Assertions # Co2, M, Status, Type, BodyS, Gl1, Gl, Co, RPos) :-
     !,
-    current_decomposed_assertion(Assertions, M, Pred, Status, Type, Cp, Ca, Su, Gl, Co1, RPos),
+    current_decomposed_assertion_1(Assertions, M, Status, Type, BodyS, Gl1, Gl, Co1, RPos),
     once(merge_comments(Co1, Co2, Co)).
-current_decomposed_assertion_(Assertions, M, Pred, Status, Type, Cp, Ca, Su, Gl, Co, RPos) :-
+current_decomposed_assertion_2(Assertions, M, Status, Type, BodyS, Gl1, Gl, Co, RPos) :-
     ( is_decl_global(Assertions, DStatus, DType, M)
     ->once(decompose_status_and_type_1(Term, DStatus, DType, Assertions)),
-      current_decomposed_assertion_(Term, M, Pred, Status, Type, Cp, Ca, Su, Gl, Co, RPos)
+      current_decomposed_assertion_2(Term, M, Status, Type, BodyS, Gl1, Gl, Co, RPos)
     ; decompose_status_and_type(Assertions, Status, Type, BodyS),
-      decompose_assertion_head_body(BodyS, M, Pred, true, Cp, Ca, Su, Gl, Co, RPos),
-      validate_body_sections(Type, Cp, Ca, Su, Gl, MustBeEmpty, MustNotBeEmpty),
-      maplist(report_must_be_empty(Type), MustBeEmpty),
-      maplist(report_must_not_be_empty(Type, RPos), MustNotBeEmpty)
+      Gl = Gl1
     ).
 
 report_must_be_empty(Type, Section-Props) :-
@@ -477,6 +482,10 @@ decompose_assertion_head_body(B, P1, M, Pred, BCp, PCp, Cp, Ca, Su, Gl, Co, CoPo
     cleanup_parentheses(P1, P),
     decompose_assertion_head_body_(B, P, M, Pred, BCp, PCp, Cp, Ca, Su, Gl, Co, CoPos, RPos).
 
+decompose_assertion_head_body_(Var, _, _, _, _, _, _, _, _, _) :-
+    var(Var),
+    !,
+    fail.
 decompose_assertion_head_body_((B1, B2), M, Pred, BCp, Cp, Ca, Su, Gl, Co, RPos) :-
     !,
     ( decompose_assertion_head_body(B1, M, Pred, BCp, Cp, Ca, Su, Gl, Co, RPos)
@@ -536,6 +545,8 @@ decompose_assertion_head_(M:H, _, P, BCp1, BCp, Cp, Ca, Su, Gl, RP) :-
     decompose_assertion_head(H, M, P, BCp1, BCp, Cp, Ca, Su, Gl, RP).
 decompose_assertion_head_(F/A, HPos, M, M:Pred, BCp1, PCp1, BCp, PCp, Cp, Ca, Su, Gl, Pos) :-
     !,
+    atom(F),
+    integer(A),
     functor(Head, F, A),
     ( once(( BCp1 = CM:BCp2,
              PCp1 = term_position(_, _, _, _, [_, PCp2])
@@ -812,8 +823,7 @@ assertion_record_each(CM, Dict, Assertions, APos, Clause, TermPos) :-
       )
     ; true
     ),
-    current_decomposed_assertion(Assertions, APos, CM, M:Head, Status,
-                                 Type, CpL, CaL, SuL, GlL, Co, CoPos, HPos),
+    current_decomposed_assertion(Assertions, APos, CM, M:Head, Status, Type, CpL, CaL, SuL, GlL, Co, CoPos, HPos),
     with_mutex('get_sequence_and_inc/1', get_sequence_and_inc(Count)),
     term_variables(t(Co, CpL, CaL, SuL, GlL), ShareL),
     atom_number(AIdx, Count),
