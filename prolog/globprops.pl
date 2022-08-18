@@ -654,7 +654,7 @@ fi(V, Goal) :-
 :- global nsh/2.
 nsh(Arg, Goal) :- check_nsh(Arg, Goal), call(Goal).
 
- check_nsh(Arg, _:Goal) :-
+check_nsh(Arg, _:Goal) :-
     ( term_variables(Arg, Vars),
       Vars \= []
     ->Goal =.. [_|Args],
