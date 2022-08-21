@@ -609,7 +609,9 @@ no_meta_modes(Goal) :- call(Goal).
 
 :- global declaration (deprecated)/1.
 
-deprecated(Goal) :- call(Goal).
+deprecated(Goal) :-
+    send_comp_rtcheck(Goal, deprecated, called),
+    call(Goal).
 
 %!  iso(:Goal)
 %
