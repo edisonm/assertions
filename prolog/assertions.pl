@@ -42,7 +42,9 @@
            asr_aprop/4,
            aprop_asr/4,
            prop_asr/4,
-           prop_asr/7]).
+           prop_asr/7,
+           current_decomposed_assertion_1/12,
+           decompose_assertion_head_body/13]).
 
 :- discontiguous '$exported_op'/3.
 :- use_module(library(compound_expand)).
