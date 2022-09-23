@@ -56,8 +56,8 @@
 :- use_module(library(filepos_line)).
 :- use_module(library(lists)).
 :- use_module(library(list_sequence)).
-:- use_module(library(termpos)).
 :- use_module(library(neck)).
+:- use_module(library(termpos)).
 :- use_module(library(prolog_codewalk), []).
 
 /** <module> Assertion reader for SWI-Prolog
@@ -382,6 +382,8 @@ is_decl_global(Head, Status, Type, M) :-
       Status = true
     ),
     !.
+
+:- multifile current_decomposed_assertion_2/9. % prevent false positive warning
 
 :- add_termpos(current_decomposed_assertion(+,?,?,?,?,?,?,?,?,-,?)).
 :- add_termpos(current_decomposed_assertion_1(+,?,?,?,-,?,?,-,?)).
@@ -809,7 +811,7 @@ expand_assertion_(CM, Dict, Assertions, APos, Records, RPos) :-
 %! assertion_record_each(CM, Dict, Assertions, APos, Clause, TermPos) is multi.
 %
 %  Unifies clause with each one of the records that defines the assertion in the
-%  assertion database.  Note that Clause contains in the last argument the
+%  assertion database.  Note that the last argument of Clause contains the
 %  locator, this is needed to get more precision, since the location is defined
 %  as file(File, Line, Pos, _), instead of the term
 %  '$source_location'(File,Line):Clause
