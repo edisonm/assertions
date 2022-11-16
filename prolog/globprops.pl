@@ -126,6 +126,7 @@ unknown(Goal) :- Goal.
 %
 %   Goal has exactly one solution
 
+:- meta_predicate det(0).
 :- global det(X) + equiv(not_fails(is_det(X))).
 
 det(Goal) :-
