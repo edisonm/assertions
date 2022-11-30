@@ -267,8 +267,7 @@ compatc(H, VarL, M) :-
       ord_intersect(VarL, [A], [A])
     ; predicate_property(M:H, meta_predicate(Spec)),
       arg(N, Spec, Meta),
-      integer(Meta),
-      Meta>=0,
+      '$expand':meta_arg(Meta),
       A = X:Y,
       ( ( var(X)
         ; current_module(X)
