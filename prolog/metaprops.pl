@@ -41,8 +41,10 @@
            (type)/2,
            check/1,
            check/2,
+           checkprop_goal/1,
            compat/1,
            compat/2,
+           with_cv_module/2,
            false/1,
            false/2,
            instan/1,
@@ -60,6 +62,8 @@
 :- use_module(library(filepos_line)).
 :- use_module(library(assertions)).
 :- use_module(library(resolve_calln)).
+:- use_module(library(context_values)).
+:- use_module(library(extend_args)).
 :- use_module(library(qualify_meta_goal)).
 :- use_module(library(compilation_module)).
 
@@ -90,12 +94,29 @@ declaration(Goal) :- call(Goal).
 
 declaration(_, Goal) :- call(Goal).
 
+cv_module(CM) :- current_context_value(current_module, CM).
+
 :- true prop type(T, A)
 # "~w is internally of type ~w, a predicate of arity 1 defined as a type/1."-[A, T].
-:- meta_predicate type(1, ?).
 
-type(T, A) :- call(T, A).
+:- meta_predicate
+        type(1, ?),
+        type(1, ?, -).
 
+type(M:T, A) :-
+    type(M:T, A, H),
+    M:H.
+
+type(M:T, A, H) :-
+    extend_args(T, [Arg], H),
+    ( cv_module(C),
+      predicate_property(M:H, meta_predicate(Spec)),
+      functor(H, _, N),
+      arg(N, Spec, Meta),
+      '$expand':meta_arg(Meta)
+    ->Arg = C:A
+    ; Arg = A
+    ).
 
 :- multifile
     unfold_calls:unfold_call_hook/4.
@@ -157,13 +178,24 @@ cleanup_prop_failure(T, S) :-
     retractall('$last_prop_failure'(_, _)),
     asserta('$last_prop_failure'(T, S)).
 
+:- meta_predicate with_cv_module(0, +).
+with_cv_module(Goal, CM) :-
+    with_context_value(Goal, current_module, CM).
+
+:- meta_predicate checkprop_goal(0 ).
+checkprop_goal(Goal) :-
+    ( current_context_value(checkprop, CheckProp)
+    ->CheckProp = compat
+    ; Goal
+    ).
 
 compat(M:Goal, VarL) :-
     copy_term_nat(Goal-VarL, Term-VarTL), % get rid of corroutining while checking compatibility
     sort(VarTL, VS),
     cleanup_prop_failure(Term, []),
     prolog_current_choice(CP),
-    compat(Term, data(VS, Term, CP), M).
+    with_context_value(
+        compat(Term, data(VS, Term, CP), M), checkprop, compat).
 
 % this small interpreter will reduce the possibility of loops if the goal being
 % checked is not linear, i.e., if it contains linked variables:
@@ -179,6 +211,11 @@ compat((A, B), D, M) :-
     !,
     compat(A, D, M),
     compat(B, D, M).
+compat(type(T, A), D, M) :-
+    !,
+    strip_module(M:T, C, H),
+    type(C:H, A, G),
+    compat(G, D, C).
 compat(compat(A), D, M) :-
     !,
     compat(A, D, M).
@@ -189,6 +226,9 @@ compat((A->B; C), D, M) :-
     ; compat(C, D, M)
     ),
     !.
+compat(\+ G, _, M) :-
+    !,
+    \+ M:G.
 compat((A->B), D, M) :-
     !,
     ( call(M:A)
@@ -197,6 +237,10 @@ compat((A->B), D, M) :-
 compat(!, data(_, _, CP), _) :-
     !,
     cut_from(CP).
+compat(checkprop_goal(_), _, _) :- !.
+compat(with_cv_module(A, C), D, M) :-
+    !,
+    with_cv_module(compat(A, D, M), C).
 compat(A, data(VarL, _, _), M) :-
     % This clause allows usage of simple test predicates as compatibility check
     compound(A),
@@ -219,13 +263,34 @@ compat_1((A; B), D, M) :-
     ),
     !.
 compat_1(A, D, M) :-
-    ( is_prop(A, M)
+    ( is_type(A, M)
     ->catch(compat_body(M:A, D),
             _,
             do_compat(M:A, D))
-    ; do_compat(M:A, D)
+    ; \+ ( \+ compat_safe(A, M),
+           \+ ground(A),
+           \+ aux_pred(A),
+           \+ is_prop(A, M),
+           print_message(warning, format("While checking compat, direct execution of predicate could cause infinite loops: ~q", [M:A-D])),
+           fail
+         ),
+      do_compat(M:A, D)
     ),
     !.
+
+aux_pred(P) :-
+    functor(P, F, _),
+    atom_concat('__aux_', _, F).
+
+compat_safe(_ =.. _, _).
+compat_safe(curr_arithmetic_function(_), _).
+compat_safe(static_strip_module(_, _, _, _), _).
+compat_safe(prop_asr(_, _, _, _), _).
+compat_safe(call_cm(_, _, _), _).
+compat_safe(_ is _, _).
+compat_safe(functor(_, _, _), _).
+compat_safe(current_predicate(_), _).
+compat_safe(goal_2(_, _), _).
 
 do_compat(Goal, data(VarL, _, _)) :-
     term_variables(VarL, VS),
@@ -243,6 +308,12 @@ del_freeze(Var) :-
 is_prop(Head, M) :-
     prop_asr(Head, M, Stat, prop, _, _, _),
     memberchk(Stat, [check, true]).
+
+is_type(CM, Head) :-
+    once(( prop_asr(Head, CM, Stat, prop, _, _, Asr),
+           memberchk(Stat, [check, true]),
+           once(prop_asr(glob, type(_), _, Asr))
+         )).
 
 :- meta_predicate compat_body(0, +).
 
@@ -281,6 +352,11 @@ compatc(H, VarL, _) :-
     compatc_arg(H, A),
     (var(A)->ord_intersect(VarL, [A], [A]) ; true).
 
+%!  compatc_arg(+Call, Arg) is semidet
+%
+%   True if Call is a call that is always true when the last argument is any term, or
+%   if Call is var(Arg).
+
 compatc_arg(var(      A), A).
 compatc_arg(nonvar(   A), A).
 compatc_arg(term(     A), A).
@@ -310,7 +386,7 @@ instan(Goal, VS) :-
     prolog_current_choice(CP),
     \+ \+ ( copy_term_nat(Goal-VS, Term-VN),
             maplist(freeze_fail(CP, Term), VS, VN),
-            Goal
+            with_context_value(Goal, checkprop, instan)
           ).
 
 pp_status(check).

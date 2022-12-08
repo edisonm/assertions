@@ -57,7 +57,8 @@ ac_head_prop_idx(Head, M, Mode, Det, From) :-
     with_acp(do_ac_head_prop_idx(Head, M, Mode, Det, From), Flag, none).
 
 do_ac_head_prop_idx(Head, M, Mode, Det, From) :-
-    var(Mode), !,
+    var(Mode),
+    !,
     ( var(Head)
     ->module_property(M, class(user)),
       current_predicate(M:F/A),

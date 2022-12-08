@@ -656,23 +656,23 @@ modedef(+A, M, B, A, Cp, Ca1, Su, Gl, Cp, Ca, Su, Gl, Ca2, Ca) :-
     ( var(A), var(Ca2)
     ->put_prop(A, M:nonvar(B), Ca1, Ca2)
     ; Ca1 = Ca2
-    ). % A bit confuse hack, Ca1 come instantiated to optimize the expression
+    ). % A bit confuse hack, Ca1 comes instantiated to optimize the expression
 modedef(-A,   M, B, A, Cp,  Ca2, Su1, Gl,  Cp, Ca, Su, Gl, Su1, Su) :- put_prop(A, M:var(B), Ca2, Ca).
 % Less restrictive - uses further instantiated:
 % modedef(-(A),         _, A, B, Pos, PA, Cp,                       Ca,                Su1,  [(globprops:fi(B))-Pos|Gl], Cp, Ca, Su, Gl, Su1, Su) :- Pos = term_position(_, _, _, _, [PA]).
 modedef(?A,   _, _, A, Cp1, Ca,  Su,  Gl,  Cp, Ca, Su, Gl, Cp1, Cp).
 modedef(@(A), _, B, A, Cp1, Ca,  Su,  Gl1, Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, globprops:nfi(B), Gl1, Gl).
 % PlDoc (SWI) Modes
-modedef(:A1, Pos, _, B, A, PA, Cp, Ca1, Su, Gl, Cp, Ca, Su, Gl, Ca2, Ca) :-
+modedef(:A1, Pos, M, B, A, PA, Cp, Ca1, Su, Gl, Cp, Ca, Su, Gl, Ca2, Ca) :-
     Pos = term_position(From, To, FFrom, FTo, [PA1]),
     % The first part of this check is not redundant if we forgot the meta_predicate declaration
     ( var(A1),
       var(Ca2)
-    ->put_prop(A, Pos, typeprops:mod_qual(B), Ca1, Ca2),
+    ->put_prop(A, Pos, M:mod_qual(B), Ca1, Ca2),
       A1 = A,
       PA = PA1
     ; Ca1 = Ca2,
-      A = typeprops:mod_qual(A1, B),
+      A = M:mod_qual(A1, B),
       PA = term_position(From, To, FFrom, FTo, [PA1, From-From])
     ).
 modedef(goal_in(N,A), _, B, A, Cp,  Ca2,  Su,  Gl, Cp, Ca, Su, Gl, Ca1, Ca) :- put_prop(A, typeprops:goal(N,B), Ca2, Ca1).

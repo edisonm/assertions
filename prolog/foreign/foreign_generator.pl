@@ -90,10 +90,6 @@
 % :- table
 %     type_props/5.
 
-% user:prolog_exception_hook(ExceptionIn, ExceptionOut, Frame, CatcherFrame) :-
-%     backtrace(40).
-
-
 % Predefined foreign dependencies:
 
 foreign_dependency(M, HAlias) :- use_foreign_header(M, HAlias).

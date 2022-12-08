@@ -55,19 +55,24 @@
 :- type int/1.
 
 int(X) :-
-    nonvar(X), !,
+    nonvar(X),
+    !,
     integer(X).
 int(X) :-
-    between(0, inf, N),
-    give_sign(N, X).
+    checkprop_goal(
+        ( between(0, inf, N),
+          give_sign(N, X)
+        )).
 
 :- type posint/1.
 
 posint(X) :-
-    nonvar(X), !,
+    nonvar(X),
+    !,
     integer(X),
     X > 0.
-posint(X) :- curr_posint(X).
+posint(X) :-
+    checkprop_goal(curr_posint(X)).
 
 curr_posint(N) :- between(1, inf, N).
 
@@ -79,8 +84,10 @@ negint(X) :-
     integer(X),
     X < 0.
 negint(X) :-
-    curr_posint(N),
-    X is -N.
+    checkprop_goal(
+        ( curr_posint(N),
+          X is -N
+        )).
 
 give_sign(0, 0) :- !.
 give_sign(P, P).
@@ -93,11 +100,12 @@ give_sign(P, N) :- N is -P.
 %   The type of non negative integers, i.e., natural numbers (including zero)
 
 nnegint(X) :-
-    nonvar(X), !,
+    nonvar(X),
+    !,
     integer(X),
     X >= 0.
 nnegint(N) :-
-    between(0, inf, N).
+    checkprop_goal(between(0, inf, N)).
 
 :- type flt/1.
 
@@ -106,20 +114,24 @@ nnegint(N) :-
 %   Floating point numbers
 
 flt(X) :-
-    nonvar(X), !,
+    nonvar(X),
+    !,
     float(X).
 flt(F) :-
-    nnegfltgen(Q),
-    give_sign(Q, F).
+    checkprop_goal(
+        ( nnegfltgen(Q),
+          give_sign(Q, F)
+        )).
 
 :- type nnegflt/1.
 
 nnegflt(X) :-
-    nonvar(X), !,
+    nonvar(X),
+    !,
     float(X),
     X >= 0.
 nnegflt(Q) :-
-    nnegfltgen(Q).
+    checkprop_goal(nnegfltgen(Q)).
 
 nnegfltgen(Q) :-
     nnegint(X),
@@ -133,12 +145,15 @@ intfrac1(X, Q) :-
 :- type posflt/1.
 
 posflt(X) :-
-    nonvar(X), !,
+    nonvar(X),
+    !,
     float(X),
     X > 0.
 posflt(Q) :-
-    curr_posint(X),
-    intfrac1(X, Q).
+    checkprop_goal(
+        ( curr_posint(X),
+          intfrac1(X, Q)
+        )).
 
 :- type rat/1.
 
@@ -146,11 +161,11 @@ rat(X) :-
     rational(X),
     !.
 rat(X) :-
-    int(A),
-    int(B),
-    X is A rdiv B.
-
-real(X) :- number(X).
+    checkprop_goal(
+        ( int(A),
+          int(B),
+          X is A rdiv B
+        )).
 
 :- type num/1.
 
@@ -161,20 +176,22 @@ real(X) :- number(X).
 num(X) :-
     nonvar(X),
     !,
-    real(X).
+    number(X).
 num(F) :-
-    nnegnumgen(Q),
-    give_sign(Q, F).
+    checkprop_goal(
+        ( nnegnumgen(Q),
+          give_sign(Q, F)
+        )).
 
 :- type nnegnum/1.
 
 nnegnum(X) :-
     nonvar(X),
     !,
-    real(X),
+    number(X),
     X >= 0.
 nnegnum(Q) :-
-    nnegnumgen(Q).
+    checkprop_goal(nnegnumgen(Q)).
 
 nnegnumgen(Q) :-
     nnegint(X),
@@ -187,8 +204,10 @@ posnum(X) :-
     number(X),
     X > 0.
 posnum(Q) :-
-    curr_posint(X),
-    intfrac2(X, Q).
+    checkprop_goal(
+        ( curr_posint(X),
+          intfrac2(X, Q)
+        )).
 
 intfrac2(X, Q) :-
     ( Q is X
@@ -212,10 +231,15 @@ frac(X, Q) :-
 %
 %   An atom
 
-atm(T) :- nonvar(T), !, atom(T).
+atm(T) :-
+    nonvar(T),
+    !,
+    atom(T).
 atm(A) :-
-    list(character_code, L),
-    atom_codes(A, L).
+    checkprop_goal(
+        ( list(character_code, L),
+          atom_codes(A, L)
+        )).
 
 :- type atmel/1.
 
@@ -232,10 +256,15 @@ atmel(A) :- atm(A).
 %
 %   A string
 
-str(T) :- nonvar(T), !, string(T).
+str(T) :-
+    nonvar(T),
+    !,
+    string(T).
 str(S) :-
-    list(character_code, L),
-    string_codes(S, L).
+    checkprop_goal(
+        ( list(character_code, L),
+          string_codes(S, L)
+        )).
 
 %!  character_code(I)
 %
@@ -246,7 +275,6 @@ str(S) :-
 character_code(I) :-
     between(0, 255, I),
     neck.
-
 
 %!  constant(C)
 %
@@ -397,7 +425,7 @@ struct(T) :- functor(T, _, A), A>0. % compound(T).
 gnd([]) :- !.
 gnd(T) :-
     term_variables(T, Vars),
-    maplist(gnd, Vars).
+    list(gnd, Vars).
 
 :- type arithexpression/1.
 
@@ -415,12 +443,12 @@ arithexpression(X) :-
     callable(X),
     curr_arithmetic_function(X),
     X =.. [_|Args],
-    maplist(arithexpression, Args).
+    list(arithexpression, Args).
 
 curr_arithmetic_function(X) :- current_arithmetic_function(X).
 curr_arithmetic_function(X) :- arithmetic:evaluable(X, _Module).
 
-% BUG: if the trace have all the ports active, we can not use ';'/2 in goal/2
+% BUG: if the trace has all the ports active, we can not use ';'/2 in goal/2
 % and some variables becomes uninstantiated. That is an SWI-Prolog bug but I
 % don't have time to isolate it --EMM
 
@@ -438,30 +466,36 @@ goal(Pred) :- goal(0, Pred).
 %   P is a defined predicate with N extra arguments
 
 :- true prop goal/2.
-:- meta_predicate goal(?, :).
+:- meta_predicate goal(+, :).
 goal(N, Pred) :-
     nnegint(N),
     goal_2(Pred, N).
 
 goal_2(M:Pred, N) :-
-    var(Pred), !,
-    ( var(M)
-    ->current_module(CM),
-      current_predicate(CM:F/A),
-      M=CM
-    ; current_module(M),
-      current_predicate(M:F/A)
-    ),
-    A >= N,
-    A1 is A - N,
-    functor(Pred, F, A1).
+    var(Pred),
+    !,
+    checkprop_goal(
+        ( ( var(M)
+          ->current_module(CM),
+            current_predicate(CM:F/A),
+            M=CM
+          ; current_module(M),
+            current_predicate(M:F/A)
+          ),
+          A >= N,
+          A1 is A - N,
+          functor(Pred, F, A1)
+        )).
 goal_2(M:Pred, N) :-
+    callable(Pred),
     functor(Pred, F, A1),
     A is A1 + N,
     ( var(M)
-    ->current_module(CM),
-      current_predicate(CM:F/A),
-      M=CM
+    ->checkprop_goal(
+          ( current_module(CM),
+            current_predicate(CM:F/A),
+            M=CM
+          ))
     ; current_module(M),
       current_predicate(M:F/A)
     ).
@@ -472,11 +506,11 @@ mod_qual(M:V) :-
     current_module(CM).
 
 :- true prop mod_qual/2.
-:- meta_predicate mod_qual(:, ?).
+:- meta_predicate mod_qual(1, ?).
 mod_qual(T, M:V) :-
     static_strip_module(V, M, C, CM),
     current_module(CM),
-    type(T, C).
+    with_cv_module(type(T, C), CM).
 
 :- type operator_specifier/1.
 
