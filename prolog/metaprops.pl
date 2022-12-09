@@ -309,8 +309,8 @@ is_prop(Head, M) :-
     prop_asr(Head, M, Stat, prop, _, _, _),
     memberchk(Stat, [check, true]).
 
-is_type(CM, Head) :-
-    once(( prop_asr(Head, CM, Stat, prop, _, _, Asr),
+is_type(Head, M) :-
+    once(( prop_asr(Head, M, Stat, prop, _, _, Asr),
            memberchk(Stat, [check, true]),
            once(prop_asr(glob, type(_), _, Asr))
          )).

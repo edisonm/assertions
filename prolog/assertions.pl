@@ -935,7 +935,8 @@ get_sequence_and_inc(S) :-
 
 term_expansion_decl(Decl, PPos, Records, RPos) :-
     nonvar(PPos),
-    PPos = parentheses_term_position(_, _, Pos), !,
+    PPos = parentheses_term_position(_, _, Pos),
+    !,
     term_expansion_decl(Decl, Pos, Records, RPos).
 term_expansion_decl(Decl, PPos, Records, RPos) :-
     ( nonvar(PPos)
