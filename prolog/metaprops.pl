@@ -45,6 +45,7 @@
            compat/1,
            compat/2,
            with_cv_module/2,
+           cv_module/1,
            false/1,
            false/2,
            instan/1,
