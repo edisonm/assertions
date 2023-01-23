@@ -501,12 +501,13 @@ goal_2(M:Pred, N) :-
     ).
 
 :- true prop mod_qual/1.
+:- meta_predicate mod_qual(:).
 mod_qual(M:V) :-
     static_strip_module(V, M, _, CM),
     current_module(CM).
 
 :- true prop mod_qual/2.
-:- meta_predicate mod_qual(1, ?).
+:- meta_predicate mod_qual(1, :).
 mod_qual(T, M:V) :-
     static_strip_module(V, M, C, CM),
     current_module(CM),
