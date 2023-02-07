@@ -242,6 +242,10 @@ compat(checkprop_goal(_), _, _) :- !.
 compat(with_cv_module(A, C), D, M) :-
     !,
     with_cv_module(compat(A, D, M), C).
+compat(var(V), _, _) :-
+    nonvar(V),
+    !,
+    fail.
 compat(A, data(VarL, _, _), M) :-
     % This clause allows usage of simple test predicates as compatibility check
     compound(A),
@@ -263,19 +267,25 @@ compat_1((A; B), D, M) :-
     ; compat(B, D, M)
     ),
     !.
+compat_1(@(A, C), D, M) :-
+    !,
+    compat_1(A, @(M:A, C), D, C, M).
 compat_1(A, D, M) :-
+    compat_1(A, M:A, D, M, M).
+
+compat_1(A, G, D, C, M) :-
     ( is_type(A, M)
-    ->catch(compat_body(M:A, D),
+    ->catch(compat_body(A, C, M, D),
             _,
-            do_compat(M:A, D))
+            do_compat(G, D))
     ; \+ ( \+ compat_safe(A, M),
            \+ ground(A),
            \+ aux_pred(A),
            \+ is_prop(A, M),
-           print_message(warning, format("While checking compat, direct execution of predicate could cause infinite loops: ~q", [M:A-D])),
+           print_message(warning, format("While checking compat, direct execution of predicate could cause infinite loops: ~q", [G-D])),
            fail
          ),
-      do_compat(M:A, D)
+      do_compat(G, D)
     ),
     !.
 
@@ -284,14 +294,15 @@ aux_pred(P) :-
     atom_concat('__aux_', _, F).
 
 compat_safe(_ =.. _, _).
-compat_safe(curr_arithmetic_function(_), _).
-compat_safe(static_strip_module(_, _, _, _), _).
-compat_safe(prop_asr(_, _, _, _), _).
-compat_safe(call_cm(_, _, _), _).
 compat_safe(_ is _, _).
-compat_safe(functor(_, _, _), _).
+compat_safe(call_cm(_, _, _), _).
+compat_safe(context_module(_), _).
+compat_safe(curr_arithmetic_function(_), _).
 compat_safe(current_predicate(_), _).
+compat_safe(functor(_, _, _), _).
 compat_safe(goal_2(_, _), _).
+compat_safe(prop_asr(_, _, _, _), _).
+compat_safe(static_strip_module(_, _, _, _), _).
 
 do_compat(Goal, data(VarL, _, _)) :-
     term_variables(VarL, VS),
@@ -316,14 +327,25 @@ is_type(Head, M) :-
            once(prop_asr(glob, type(_), _, Asr))
          )).
 
-:- meta_predicate compat_body(0, +).
+:- meta_predicate compat_body(0,+,+,+,+).
 
-compat_body(MG1, data(V, T, _)) :-
-    qualify_meta_goal(MG1, MG),
-    prolog_current_choice(CP),
+compat_body(MG, C, V, T, CP) :-
     clause(MG, Body, Ref),
-    clause_property(Ref, module(CM)),
+    clause_property(Ref, module(S)), % Source module
+    ( predicate_property(MG, transparent),
+      \+ ( predicate_property(MG, meta_predicate(Meta)),
+           arg(_, Meta, Spec),
+           '$expand':meta_arg(Spec)
+         )
+    ->CM = C
+    ; CM = S
+    ),
     compat(Body, data(V, T, CP), CM).
+
+compat_body(G1, C, M, data(V, T, _)) :-
+    qualify_meta_goal(G1, M, C, G),
+    prolog_current_choice(CP),
+    compat_body(M:G, C, V, T, CP).
 
 :- use_module(library(safe_prolog_cut_to)).
 
@@ -351,7 +373,10 @@ compatc(H, VarL, M) :-
     !.
 compatc(H, VarL, _) :-
     compatc_arg(H, A),
-    (var(A)->ord_intersect(VarL, [A], [A]) ; true).
+    ( var(A)
+    ->ord_intersect(VarL, [A], [A])
+    ; true
+    ).
 
 %!  compatc_arg(+Call, Arg) is semidet
 %
