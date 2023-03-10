@@ -172,7 +172,9 @@ last_prop_failure(L) :-
     retractall('$last_prop_failure'(_, _)).
 
 asserta_prop_failure(T, S) :-
-    once(retract('$last_prop_failure'(T, L))),
+    once(( retract('$last_prop_failure'(T, L))
+         ; L = []
+         )),
     asserta('$last_prop_failure'(T, [S|L])).
 
 cleanup_prop_failure(T, S) :-
@@ -189,6 +191,8 @@ checkprop_goal(Goal) :-
     ->CheckProp = compat
     ; Goal
     ).
+
+:- meta_predicate compat(0, +).
 
 compat(M:Goal, VarL) :-
     copy_term_nat(Goal-VarL, Term-VarTL), % get rid of corroutining while checking compatibility
