@@ -58,7 +58,7 @@
            trust/2
           ]).
 
-:- use_module(library(compound_expand)).
+:- reexport(library(compound_expand)).
 :- use_module(library(neck)).
 :- use_module(library(filepos_line)).
 :- use_module(library(assertions)).

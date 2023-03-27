@@ -47,7 +47,7 @@
            decompose_assertion_head_body/13]).
 
 :- discontiguous '$exported_op'/3.
-:- use_module(library(compound_expand)).
+:- reexport(library(compound_expand)).
 :- reexport(library(assertions_op)).
 :- use_module(library(extend_args)).
 :- use_module(library(apply)).
