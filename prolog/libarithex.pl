@@ -35,18 +35,30 @@
 :- module(libarithex, []).
 
 :- use_module(library(assertions)).
+:- use_module(library(typeprops)).
 :- use_module(library(plprops)).
 :- use_module(library(foreign/foreign_interface)).
 :- use_module(library(foreign/foreign_props)).
 :- link_foreign_library(m).
 :- gen_foreign_library(plbin(libarithex)).
 
-:- pred [user:cbrt(  +num, -B:num),
-         user:exp10( +num, -B:num),
-         user:exp2(  +num, -B:num),
-         user:expm1( +num, -B:num),
-         user:log1p( +num, -B:num),
-         user:log2(  +num, -B:num),
-         user:tgamma(+num, -B:num),
-         user:hypot(+num, +num, -B:num)
+% TBD: make this work:
+% :- pred [user:cbrt(  +num, -B:num),
+%          user:exp10( +num, -B:num),
+%          user:exp2(  +num, -B:num),
+%          user:expm1( +num, -B:num),
+%          user:log1p( +num, -B:num),
+%          user:log2(  +num, -B:num),
+%          user:tgamma(+num, -B:num),
+%          user:hypot(+num, +num, -B:num)
+%         ] is (det, returns(B), foreign).
+
+:- pred [(user:cbrt(  A, B)):(num(A),var(A))=>num(B),
+         (user:exp10( A, B)):(num(A),var(A))=>num(B),
+         (user:exp2(  A, B)):(num(A),var(A))=>num(B),
+         (user:expm1( A, B)):(num(A),var(A))=>num(B),
+         (user:log1p( A, B)):(num(A),var(A))=>num(B),
+         (user:log2(  A, B)):(num(A),var(A))=>num(B),
+         (user:tgamma(A, B)):(num(A),var(A))=>num(B),
+         (user:hypot(A, X, B)):(num(A),var(A),num(X),var(X))=>num(B)
         ] is (det, returns(B), foreign).
