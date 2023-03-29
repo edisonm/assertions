@@ -95,7 +95,12 @@ declaration(Goal) :- call(Goal).
 
 declaration(_, Goal) :- call(Goal).
 
-cv_module(CM) :- current_context_value(current_module, CM).
+:- true prop cv_module/1.
+
+cv_module(CM) :-
+    current_context_value(current_module, CM),
+    !.
+cv_module(user).
 
 :- true prop type(T, A)
 # "~w is internally of type ~w, a predicate of arity 1 defined as a type/1."-[A, T].
