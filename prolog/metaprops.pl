@@ -39,34 +39,22 @@
            (global)/2,
            (type)/1,
            (type)/2,
-           check/1,
-           check/2,
            checkprop_goal/1,
            compat/1,
            compat/2,
            with_cv_module/2,
            cv_module/1,
-           false/1,
-           false/2,
            instan/1,
            instan/2,
-           last_prop_failure/1,
-           pp_status/1,
-           true/1,
-           true/2,
-           trust/1,
-           trust/2
+           last_prop_failure/1
           ]).
 
-:- reexport(library(compound_expand)).
-:- use_module(library(neck)).
 :- use_module(library(filepos_line)).
 :- use_module(library(assertions)).
 :- use_module(library(resolve_calln)).
 :- use_module(library(context_values)).
 :- use_module(library(extend_args)).
 :- use_module(library(qualify_meta_goal)).
-:- use_module(library(compilation_module)).
 
 :- true prop (type)/1 + (declaration(check), global(prop)) # "Defines a type.".
 
@@ -423,39 +411,3 @@ instan(Goal, VS) :-
             maplist(freeze_fail(CP, Term), VS, VN),
             with_context_value(Goal, checkprop, instan)
           ).
-
-pp_status(check).
-pp_status(trust).
-pp_status(true ).
-pp_status(false).
-
-:-  pp_status(Status),
-    ( Call =.. [Status, 0   ]
-    ; Call =.. [Status, 0, +]
-    ),
-    neck,
-    meta_predicate(Call).
-
-Call :-
-    pp_status(Status),
-    ( Call =.. [Status, _]
-    ; Call =.. [Status, _, _]
-    ),
-    neck.
-
-goal_expansion(Check, TermPos1, CheckLoc, TermPos) :-
-    pp_status(Status),
-    Check =.. [Status, Pred],
-    CheckLoc =.. [Status, Pred, Loc],
-    Loc = file(File, Line, Pos, _),
-    necks,
-    source_location(File, Line1),
-    ( var(TermPos1)
-    ->Line = Line1,
-      Pos = -1,
-      TermPos = TermPos1
-    ; TermPos1 = term_position(From, To, FFrom, FTo, [APos]),
-      integer(From),
-      filepos_line(File, From, Line, Pos),
-      TermPos  = term_position(From, To, FFrom, FTo, [APos, _])
-    ).

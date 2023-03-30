@@ -3,7 +3,7 @@
     Author:        Edison Mera
     E-mail:        efmera@gmail.com
     WWW:           https://github.com/edisonm/assertions
-    Copyright (C): 2017, Process Design Center, Breda, The Netherlands.
+    Copyright (C): 2023, Process Design Center, Breda, The Netherlands.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -32,11 +32,71 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(plprops, []).
+:- module(ppntprops,
+          [ pp_status/1,
+            check/1,
+            check/2,
+            false/1,
+            false/2,
+            true/1,
+            true/2,
+            trust/1,
+            trust/2
+          ]
+         ).
 
-:- reexport(library(metaprops)).
-:- reexport(library(globprops)).
-:- reexport(library(typeprops)).
-:- reexport(library(ppntprops)).
-:- use_module(library(libprops)).
-:- use_module(library(xlibprops)).
+:- reexport(library(compound_expand)).
+:- use_module(library(neck)).
+:- use_module(library(filepos_line)).
+
+/** <module> Program point assertions
+
+    Assertions status that can be used at literal level, for instance:
+
+```
+p(A, B) :-
+    q(A, B),
+    check((int(A),int(B))).
+```
+
+    this differs from simply call check/1 in which it will add location
+    information fo facilitate debuging.
+
+*/
+
+
+pp_status(check).
+pp_status(trust).
+pp_status(true ).
+pp_status(false).
+
+:-  pp_status(Status),
+    ( Call =.. [Status, 0   ]
+    ; Call =.. [Status, 0, +]
+    ),
+    neck,
+    meta_predicate(Call).
+
+Call :-
+    pp_status(Status),
+    ( Call =.. [Status, _]
+    ; Call =.. [Status, _, _]
+    ),
+    neck.
+
+goal_expansion(Check, TermPos1, CheckLoc, TermPos) :-
+    pp_status(Status),
+    Check =.. [Status, Pred],
+    CheckLoc =.. [Status, Pred, Loc],
+    Loc = file(File, Line, Pos, _),
+    necks,
+    source_location(File, Line1),
+    ( var(TermPos1)
+    ->Line = Line1,
+      Pos = -1,
+      TermPos = TermPos1
+    ; TermPos1 = term_position(From, To, FFrom, FTo, [APos]),
+      integer(From),
+      filepos_line(File, From, Line, Pos),
+      TermPos  = term_position(From, To, FFrom, FTo, [APos, _])
+    ).
