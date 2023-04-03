@@ -41,6 +41,7 @@
 :- use_module(library(metaprops)).
 :- use_module(library(globprops)).
 :- use_module(library(typeprops)).
+:- init_expansors.
 
 :- pred functor(+, -constant, -nnegint) is det.
 :- pred functor(-, +constant, +nnegint) is det.

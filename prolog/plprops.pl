@@ -40,3 +40,4 @@
 :- reexport(library(ppntprops)).
 :- use_module(library(libprops)).
 :- use_module(library(xlibprops)).
+:- init_expansors.

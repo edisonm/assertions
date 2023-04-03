@@ -74,6 +74,8 @@
 :- use_module(library(mapargs)).
 :- use_module(library(neck)).
 
+:- init_expansors.
+
 :- type foreign_spec/1.
 
 foreign_spec(name(  Name  )) :- atm(Name).

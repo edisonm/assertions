@@ -39,6 +39,7 @@
 :- use_module(library(plprops)).
 :- use_module(library(foreign/foreign_interface)).
 :- use_module(library(foreign/foreign_props)).
+:- init_expansors.
 :- link_foreign_library(m).
 :- gen_foreign_library(plbin(libarithex)).
 

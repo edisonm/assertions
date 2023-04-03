@@ -38,6 +38,7 @@
 
 :- use_module(library(assertions)).
 :- use_module(library(intercept)).
+:- init_expansors.
 
 get_comp_rtcheck_info(Goal, Name, ALoc) :-
     ( nb_current('$with_asr', Asr)

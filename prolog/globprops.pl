@@ -79,6 +79,7 @@
 :- use_module(library(metaprops)).
 :- use_module(library(typeprops)).
 :- use_module(library(send_check)).
+:- init_expansors.
 
 /** <module> Global Properties
 

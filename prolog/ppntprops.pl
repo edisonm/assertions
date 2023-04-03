@@ -48,6 +48,7 @@
 :- reexport(library(compound_expand)).
 :- use_module(library(neck)).
 :- use_module(library(filepos_line)).
+:- init_expansors.
 
 /** <module> Program point assertions
 

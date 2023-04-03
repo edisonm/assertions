@@ -54,11 +54,12 @@
 :- use_module(library(pairs)).
 :- use_module(library(extra_messages), []).
 :- use_module(library(filepos_line)).
-:- use_module(library(lists)).
-:- use_module(library(list_sequence)).
 :- use_module(library(neck)).
 :- use_module(library(termpos)).
+:- use_module(library(lists)).
+:- use_module(library(list_sequence)).
 :- use_module(library(prolog_codewalk), []).
+:- init_expansors.
 
 /** <module> Assertion reader for SWI-Prolog
 

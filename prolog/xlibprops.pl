@@ -38,6 +38,7 @@
 :- use_module(library(typeprops)).
 :- use_module(library(normalize_head)).
 :- use_module(library(qualify_meta_goal)).
+:- init_expansors.
 
 :- pred normalize_head(:predname, goal).
 :- pred normalize_head(:callable, goal).

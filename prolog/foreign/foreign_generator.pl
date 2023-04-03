@@ -61,6 +61,7 @@
 :- use_module(library(thread)).
 :- use_module(library(transpose)).
 :- use_module(library(pairs)).
+:- init_expansors.
 
 :- multifile
     foreign_dependency/2,

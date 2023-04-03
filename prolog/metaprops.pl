@@ -54,6 +54,13 @@
 :- use_module(library(context_values)).
 :- use_module(library(extend_args)).
 :- use_module(library(qualify_meta_goal)).
+:- use_module(library(safe_prolog_cut_to)).
+:- use_module(library(gcb)).
+:- use_module(library(list_sequence)).
+:- use_module(library(substitute)).
+:- use_module(library(clambda)).
+:- use_module(library(terms_share)).
+:- init_expansors.
 
 :- true prop (type)/1 + (declaration(check), global(prop)) # "Defines a type.".
 
@@ -124,12 +131,6 @@ unfold_calls:unfold_call_hook(type(T, A), metaprops, M, M:call(T, A)).
 compat(M:Goal) :-
     term_variables(Goal, VS),
     compat(M:Goal, VS).
-
-:- use_module(library(gcb)).
-:- use_module(library(list_sequence)).
-:- use_module(library(substitute)).
-:- use_module(library(clambda)).
-:- use_module(library(terms_share)).
 
 :- thread_local
         '$last_prop_failure'/2.
@@ -342,8 +343,6 @@ compat_body(G1, C, M, data(V, T, _)) :-
     qualify_meta_goal(G1, M, C, G),
     prolog_current_choice(CP),
     compat_body(M:G, C, V, T, CP).
-
-:- use_module(library(safe_prolog_cut_to)).
 
 cut_from(CP) :- catch(safe_prolog_cut_to(CP), _, true).
 

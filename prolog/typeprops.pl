@@ -47,6 +47,7 @@
 :- use_module(library(metaprops)).
 :- use_module(library(apply)).
 :- use_module(library(static_strip_module)).
+:- init_expansors.
 
 %!  int(Int)
 %

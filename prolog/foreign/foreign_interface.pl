@@ -39,6 +39,7 @@
 :- use_module(library(change_alias)).
 :- use_module(library(codegen)).
 :- reexport(library(compound_expand)).
+:- init_expansors.
 
 term_expansion((:- gen_foreign_library(AliasSO)),
                foreign_generator:gen_foreign_library(M, AliasSO, [])) :-
