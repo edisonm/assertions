@@ -1615,7 +1615,7 @@ bind_call_predicate(CM, Glob, BN) -->
 
 declare_forg_impl(Head, M, Module, Comp, Call, Succ, Glob, Bind, _ImplHead) -->
     { max_fli_args(MaxFLIArgs),
-      necks,
+      neck,
       Bind = (PI as _/PCN + CheckMode),
       declare_intf_head(PCN, Head, PCNH)
     },
@@ -1992,7 +1992,7 @@ match_known_type(MType, M, N, MSpec, A) -->
     { member(MType-MSpec, [ptr( Type, A)-ptr( Spec),
                            list(Type, A)-list(Spec)])
     },
-    necks,
+    neck,
     {nonvar(Type)},
     match_known_type_type(Type, E, M, N, Spec, E),
     !.

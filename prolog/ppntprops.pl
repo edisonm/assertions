@@ -90,7 +90,7 @@ goal_expansion(Check, TermPos1, CheckLoc, TermPos) :-
     Check =.. [Status, Pred],
     CheckLoc =.. [Status, Pred, Loc],
     Loc = file(File, Line, Pos, _),
-    necks,
+    neck,
     source_location(File, Line1),
     ( var(TermPos1)
     ->Line = Line1,
