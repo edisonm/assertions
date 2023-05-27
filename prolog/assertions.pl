@@ -63,9 +63,8 @@
 
 /** <module> Assertion reader for SWI-Prolog
 
-@note:
-  asr_* declared multifile to allow extensibility. At this point you
-  extend concrete assertions (not abstractions or fake ones, since they will be
+@note: asr_* declared multifile to allow extensibility. At this point you extend
+  concrete assertions (not abstractions or fake ones, since they will be
   collected by the run-time checker, for instance)
 
 
@@ -383,8 +382,6 @@ is_decl_global(Head, Status, Type, M) :-
       Status = true
     ),
     !.
-
-:- multifile current_decomposed_assertion_2/9. % prevent false positive warning
 
 :- add_termpos(current_decomposed_assertion(+,?,?,?,?,?,?,?,?,-,?)).
 :- add_termpos(current_decomposed_assertion_1(+,?,?,?,-,?,?,-,?)).
