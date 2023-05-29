@@ -37,6 +37,7 @@
 :- use_module(library(assertions), []).
 :- use_module(library(interface), []).
 :- use_module(library(context_values)).
+:- init_expansors.
 
 % Propagate assertions in an interface to the implementation
 

@@ -37,6 +37,7 @@
 :- use_module(library(assertions)).
 :- use_module(library(assertions_op)).
 :- use_module(user:library(plprops)).
+:- init_expansors.
 
 :- create_prolog_flag(assrt_comment, yes, [type(atom)]).
 
