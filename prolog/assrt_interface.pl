@@ -34,7 +34,7 @@
 
 :- module(assrt_interface, []).
 
-:- use_module(library(assertions), []).
+:- use_module(library(assertions)).
 :- use_module(library(interface), []).
 :- use_module(library(context_values)).
 :- init_expansors.
