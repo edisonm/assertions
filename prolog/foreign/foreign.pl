@@ -42,7 +42,6 @@ Empty library whose only goal is to precompile the common libraries
 
 :- use_module(library(assertions)).
 :- use_module(library(foreign/foreign_interface)).
-
 :- init_expansors.
 
 :- gen_foreign_library(plbin(libforeign)).
