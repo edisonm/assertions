@@ -460,7 +460,7 @@ apply_dict_tp(_-TypePropLDictL) :- maplist(apply_dict_tp_2, TypePropLDictL).
 apply_dict_tp_2(t(Type, PropL, GlobL, Dict)) :- apply_dict(Type-PropL-GlobL, Dict).
 
 auto_generated_types(M, t(Type, PropL, GlobL, Dict), t(Type, PropS, GlobL, Dict)) -->
-    { functor(Type, Name, _),
+    { get_type_name(Type, Name),
       foldl(match_unknown_type(M, Name), PropL, PropTypeL1, []),
       foldl(cleanup_redundant(Type, PropL), PropTypeL1, PropTypeL, []),
       substitute_values(PropTypeL, PropL, PropS)
@@ -580,7 +580,7 @@ implement_type_getter_union_ini_join(SubType, Spec, Term, Name, UType) -->
       ->UType = "*"+UType1
       ; UType = UType1
       ),
-      functor(Term, Func, _),
+      get_type_name(Term, Func),
       '$current_source_module'(CM)
     },
     implement_type_getter_ini(PName, CName, Spec, Name),
@@ -613,7 +613,7 @@ implement_type_getter_union_end(enum  ) --> implement_type_end.
 
 enum_elem(Name, Term, Name+"_"+Suff) :- enum_suff(Term, Suff).
 
-enum_suff(Term, Elem) :- functor(Term, Elem, _).
+enum_suff(Term, Elem) :- get_type_name(Term, Elem).
 
 implement_type_getter(union_ini(SubType, Spec, _), Term, Name) -->
     implement_type_getter_union_ini(SubType, Spec, Term, Name).
@@ -731,7 +731,7 @@ implement_type_end -->
 
 term_pcname(Term, NameL, Name) :-
     ( compound(Term)
-    ->functor(Term, Func, _)
+    ->get_type_name(Term, Func)
     ; Func = Term
     ),
     ( valid_csym(Func)
@@ -791,7 +791,7 @@ cname_utype(enum,  CName, CName).
 implement_type_unifier_union_ini_join(SubType, Spec, Term, Name, UType) -->
     { term_pcname(Term, Name, PName, CName),
       cname_utype(SubType, CName, UType),
-      functor(Term, Func, _),
+      get_type_name(Term, Func),
       '$current_source_module'(CM)
     },
     implement_type_unifier_ini(PName, CName, Name, Spec),
@@ -1045,7 +1045,7 @@ declare_struct(atomic(SubType, Name), Spec, Term) -->
       ctype_suff(Spec, Suff)
     },
     ( {SubType = union}
-    ->{functor(Term, TName, _)},
+    ->{get_type_name(Term, TName)},
       ["    "+Decl+" "+TName+Suff+";"]
     ; ["typedef "+Decl+" "+Name+Suff+";"]
     ).
@@ -1167,8 +1167,17 @@ prolog:message(failed_binding(TypeComponents)) -->
 type_components(M, TypePropLDictL, Call, Loc) -->
     foldl(type_components_1(M, Call, Loc), TypePropLDictL).
 
+fix_reserved_name(if, '_if').
+
+get_type_name(Type, Name) :-
+    functor(Type, Name1, _),
+    ( fix_reserved_name(Name1, Name)
+    ->true
+    ; Name = Name1
+    ).
+
 type_components_1(M, Call, Loc, Type-TypePropLDictL) -->
-    { functor(Type, Name, _),
+    { get_type_name(Type, Name),
       ( TypePropLDictL = [t(_, [], _, _)]
       ->SubType = cdef,
         Spec = cdef(Name)
@@ -1998,7 +2007,7 @@ match_known_type(MType, M, N, MSpec, A) -->
     !.
 match_known_type(Type, M, _, tdef(Name, Spec), A) -->
     { type_is_tdef(M, Type, Spec, A),
-      functor(Type, Name, _)
+      get_type_name(Type, Name)
     },
     !.
 match_known_type(setof(Type, A), M, N, Spec, A) -->
@@ -2098,7 +2107,7 @@ type_is_tdef(M, Type, Spec, A) :-
     !.
 
 bind_argument(Head, M, CM, CompL, CallL, SuccL, GlobL, Arg, Spec, Mode) :-
-    functor(Head, Name, _),
+    get_type_name(Head, Name),
     ( member(Comp, CompL),
       once(match_known_type(Comp, CM, Name, Spec, Arg1)),
       Arg1 == Arg
