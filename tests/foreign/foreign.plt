@@ -120,4 +120,9 @@ test(array) :-
     test_array(2, Array, CheckSum),
     assertion(abs(CheckSum-2.91666666666666) < 1e-12).
 
+test(setofn) :-
+    f_setof_enum_2([1,2,3,200,201], X, Y, _),
+    assertion(X=[1, 2, 3, 100, 123, 200, 201, 255]),
+    assertion(X==Y).
+
 :- end_tests(foreign).

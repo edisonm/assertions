@@ -24,12 +24,25 @@ void c_union_example(uniond_t* const in, uniond_t** io,
 }
 
 void c_setof_enum(setof_enum_s const in, setof_enum_s **io, setof_enum_s *ou, long *ix) {
-    *ou = 1<<enum_example_t_element_a | 1<<enum_example_t_element_f_g_h;
+    FI_empty_setof_enum_s(*ou);
+    FI_add_element_setof_enum_s(enum_example_t_element_a, *ou);
+    FI_add_element_setof_enum_s(enum_example_t_element_f_g_h, *ou);
     *io = ou;
     *ix = in;
 }
 
-void  extend(int* const in, int** out) {
+void c_setof_enum256(setof_enum256_s const in, setof_enum256_s **io, setof_enum256_s *ou, long *ix) {
+    FI_empty_setof_enum256_s(*ou);
+    (*ou)[0] = in[0];
+    (*ou)[1] = in[1];
+    FI_add_element_setof_enum256_s(enum256_s_255, *ou);
+    FI_add_element_setof_enum256_s(enum256_s_100, *ou);
+    FI_add_element_setof_enum256_s(enum256_s_123, *ou);
+    *io = ou;
+    *ix = in[0];
+}
+
+void extend(int* const in, int** out) {
     int i, n = FI_array_length(in);
     *out = in;
     for (i=0;i<n;i++) {

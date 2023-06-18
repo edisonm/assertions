@@ -180,7 +180,8 @@ generate_library(M, AliasSO, AliasSOPl, InitL, File) :-
     ).
 
 compile_library(M, FileSO, File, FSourceL) :-
-    ( forall(( member(Dep, FSourceL)
+    intf_file(FileSO, IntfFile),
+    ( forall(( member(Dep, [IntfFile|FSourceL])
              ; foreign_dependency(M, HAlias),
                absolute_file_name(HAlias, Dep,
                                   [extensions(['.h','']),
@@ -190,7 +191,7 @@ compile_library(M, FileSO, File, FSourceL) :-
              is_newer(FileSO, Dep))
     ->print_message(informational,
                     format("Skipping compilation of ~w: is up to date", [FileSO]))
-    ; do_compile_library(M, FileSO, File, FSourceL)
+    ; do_compile_library(M, FileSO, File, FSourceL, IntfFile)
     ).
 
 % Beyond MaxFLIArgs arguments we should pack foreign arguments due to a
@@ -239,15 +240,23 @@ do_generate_library(M, FileSO, File, InitL) :-
     file_name_extension(BaseFile, _, FileSO),
     generate_foreign_interface(M, File, InitL, BaseFile).
 
-
-do_compile_library(M, FileSO, File, FSourceL) :-
-    file_name_extension(BaseFile, _, FileSO),
+dir_intf(File, DirIntf) :-
     absolute_file_name(library(foreign/foreign_interface),
                        IntfPl,
                        [file_type(prolog), access(read), relative_to(File)]),
-    directory_file_path(DirIntf, _, IntfPl),
-    directory_file_path(DirSO,   _, FileSO),
-    atom_concat(BaseFile, '_intf.c', IntfFile),
+    directory_file_path(DirIntf, _, IntfPl).
+
+intf_file(FileSO, IntfFile) :-
+    file_name_extension(BaseFile, _, FileSO),
+    atom_concat(BaseFile, '_intf.c', IntfFile).
+
+do_compile_library(M, FileSO, File, FSourceL) :-
+    intf_file(FileSO, IntfFile),
+    do_compile_library(M, FileSO, File, FSourceL, IntfFile).
+
+do_compile_library(M, FileSO, File, FSourceL, IntfFile) :-
+    dir_intf(File, DirIntf),
+    directory_file_path(DirSO, _, FileSO),
     findall(IDir, ( ( Dir = DirSO
                     ; Dir = DirIntf
                     ; include_foreign_dir(M, DAlias),
@@ -562,8 +571,8 @@ define_aux_variables(dict_key_value(_, _, _, _), _, _) --> !, {fail}.
 define_aux_variables(_, _, _) --> [].
 
 implement_type_getter_ini(PName, CName, Spec, Name) -->
-    { ctype_decl(Spec, Decl1),
-      ( Spec = array(_, _)
+    { ctype_iarg_decl(Spec, Decl1),
+      ( memberchk(Spec, [array(_, _), setof(_, _, _, _)])
       ->Decl = Decl1
       ; Decl = Decl1+"*"
       )
@@ -640,7 +649,11 @@ implement_type_getter(func_rec(SubType, N, Term, Name), Spec, Arg) -->
       Indent = "    "
     },
     { func_pcname(Name, PName, CName),
-      CNameArg="&"+CName+"->"+CRecordName+"",
+      ( memberchk(Spec, [setof(_, _, _, _)])
+      ->CRef=""
+      ; CRef="&"
+      ),
+      CNameArg=CRef+CName+"->"+CRecordName+"",
       PNameArg=PName+"_"+PRecordName
     },
     ( {SubType = union_type}
@@ -920,8 +933,15 @@ spec_pointer(list(_)).
 spec_pointer(tdef(_, Spec)) :- spec_pointer(Spec).
 % spec_pointer(type(_)).
 
+ctype_iarg_decl(setof( _, Name, _, _)) --> !, acodes(Name).
+ctype_iarg_decl(Spec) --> ctype_decl(Spec).
+
+ctype_iarg_decl(Spec, Decl) :-
+    ctype_iarg_decl(Spec, Codes, []),
+    atom_codes(Decl, Codes).
+
 implement_type_unifier_ini(PName, CName, Name, Spec) -->
-    { ctype_decl(Spec, Decl),
+    { ctype_iarg_decl(Spec, Decl),
       ( \+ref_type(Spec)
       ->DRef = ""
       ; DRef = "*"
@@ -1036,18 +1056,44 @@ declare_struct_union_end(cdef,   _) --> [].
 declare_struct_union_end(struct, _) --> [].
 declare_struct_union_end(enum,   _) --> [].
 
+ctype_decl_suff(array(Spec,    Dim)) -->
+    !,
+    "[", acodes(Dim), "]", ctype_decl_suff(Spec).
+ctype_decl_suff(setof(_, _, _, Dim)) -->
+    !,
+    ( {Dim = 1}
+    ->""
+    ; "[", acodes(Dim), "]"
+    ).
+ctype_decl_suff(_) --> "".
+
+ctype_decl_suff(Spec, Suff) :-
+    ctype_decl_suff(Spec, Codes, []),
+    atom_codes(Suff, Codes).
+
+declare_getset_macros(setof(_, _, _, Dim), Name) -->
+    !,
+    {c_dim_mult(Dim, Mult)},
+    ["#define FI_empty_"+Name+"(__set) FI_empty_set_"+Mult+"(__set, "+Dim+")"],
+    ["#define FI_chk_element_"+Name+"(__elem, __set) FI_chk_element_"+Mult+"(__elem, __set)"],
+    ["#define FI_add_element_"+Name+"(__elem, __set) FI_add_element_"+Mult+"(__elem, __set)"],
+    ["#define FI_del_element_"+Name+"(__elem, __set) FI_del_element_"+Mult+"(__elem, __set)"],
+    ["#define FI_xor_element_"+Name+"(__elem, __set) FI_xor_element_"+Mult+"(__elem, __set)"].
+declare_getset_macros(_, _) --> "".
+
 declare_struct(union_ini(SubType, Spec, TPDL), _, Name) -->
     declare_struct_union_ini(SubType, Spec, TPDL, Name).
 declare_struct(union_end(SubType, Spec), _, _) -->
     declare_struct_union_end(SubType, Spec).
 declare_struct(atomic(SubType, Name), Spec, Term) -->
     { ctype_decl(Spec, Decl),
-      ctype_suff(Spec, Suff)
+      ctype_decl_suff(Spec, Suff)
     },
     ( {SubType = union}
     ->{get_type_name(Term, TName)},
       ["    "+Decl+" "+TName+Suff+";"]
-    ; ["typedef "+Decl+" "+Name+Suff+";"]
+    ; ["typedef "+Decl+" "+Name+Suff+";"],
+      declare_getset_macros(Spec, Name)
     ).
 declare_struct(func_ini(SubType, Spec), Term, _) -->
     ( {SubType = union,
@@ -1100,7 +1146,12 @@ declare_type_union_ini(struct, _, _, _) --> [].
 
 declare_type(Opt, Data, Type, Name) --> declare_type_(Data, Opt, Type, Name).
 
-declare_type_(atomic(_, _), _, _, _) --> [].
+% declare_type_(atomic(_, _), _, _, _) --> [].
+declare_type_(atomic(SubType, Name), Opt, Spec, _) -->
+    ( {SubType = union}
+    ->[]
+    ; declare_type(Opt, Name, Spec)
+    ).
 declare_type_(union_ini(SubType, Spec, _), Opt, _, Name) -->
     declare_type_union_ini(SubType, Opt, Name, Spec).
 declare_type_(union_end(_, _), _, _, _) --> [].
@@ -1117,15 +1168,15 @@ declare_type_(dict_end(_, _, _), _, _, _) --> [].
 declare_type_(dict_rec(_, _, _, _, _), _, _, _) --> [].
 
 declare_type(gett, Name, Spec) -->
-    { ctype_decl(Spec, Decl1),
-      ( Spec = array(_, _)
+    { ctype_iarg_decl(Spec, Decl1),
+      ( memberchk(Spec, [array(_, _), setof(_, _, _, _)])
       ->Decl = Decl1
       ; Decl = Decl1+"*"
       )
     },
     ["int FI_get_"+Name+"(root_t __root, term_t, "+Decl+");"].
 declare_type(unif, Name, Spec) -->
-    { ctype_decl(Spec, Decl1),
+    { ctype_iarg_decl(Spec, Decl1),
       ( \+ref_type(Spec)
       ->DRef = Decl1
       ; DRef = Decl1+"*"
@@ -1409,6 +1460,10 @@ ctype_barg_decl(Spec, Mode) -->
     ; []
     ). % Ensure const correctness
 
+ctype_arg_decl(setof(_, Name, _, _), Mode) -->
+    !,
+    acodes(Name),
+    ({member(Mode, [in, out])} -> [] ; "*").
 ctype_arg_decl(Spec, Mode) -->
     ctype_decl(Spec),
     ({is_ref(Spec, Mode)} -> [] ; "*").
@@ -1417,12 +1472,8 @@ ctype_arg_decl(Spec, Mode, Decl) :-
     ctype_arg_decl(Spec, Mode, Codes, []),
     atom_codes(Decl, Codes).
 
-
-ctype_suff(array(Spec, Dim), CDim) --> "[", call(CDim, Dim), "]", ctype_suff(Spec, CDim).
-ctype_suff(Spec, _) -->
-    {member(Spec, [list(_), ptr(_), chrs(_), string(_), tdfstr(_), struct(_), term,
-                   tden(_, _), enum(_, _), tdef(_, _), setof(_, _), cdef(_), _-_])},
-    neck.
+ctype_suff(array(Spec, Dim), CDim) --> !, "[", call(CDim, Dim), "]", ctype_suff(Spec, CDim).
+ctype_suff(_, _) --> "".
 
 ctype_suff(Spec) --> ctype_suff(Spec, acodes).
 
@@ -1467,7 +1518,7 @@ ctype_decl(tden(Name, _))  --> acodes(Name).
 ctype_decl(enum(Name, _))  --> "enum ", acodes(Name).
 ctype_decl(term)           --> "term_t".
 ctype_decl(tdef(Name, _))  --> acodes(Name).
-ctype_decl(setof(Name, _)) --> acodes(Name).
+ctype_decl(setof(Name, _, _, _)) --> acodes(Name).
 ctype_decl(cdef(Name))     --> acodes(Name).
 ctype_decl(_-CType)        --> acodes(CType).
 
@@ -1661,7 +1712,7 @@ c_set_argument(T-_,         M, C, A, L) :- c_set_argument_one(M, T, C, A, L).
 c_set_argument(chrs(_),     M, C, A, L) :- c_set_argument_chrs(M, C, A, L).
 c_set_argument(string(_),   M, C, A, L) :- c_set_argument_string(M, C, A, L).
 c_set_argument(tdef(_, S),  M, C, A, L) :- c_set_argument(S, M, C, A, L).
-c_set_argument(setof(_, S), M, C, A, L) :- c_set_argument_setof(M, S, C, A, L).
+c_set_argument(setof(_, _, S, D), M, C, A, L) :- c_set_argument_setof(M, S, D, C, A, L).
 c_set_argument(term,        _, C, A, "__rtcheck(PL_unify("+A+", "+C+"))").
 
 c_set_argument_one(out,   Type, CArg, Arg, "__rtc_FI_unify("+Type+", "+Arg+", "+CArg+")").
@@ -1687,10 +1738,15 @@ c_set_argument_rec(Type, Spec, CArg, Arg, "FI_unify_"+Type+"("+L+", "+Arg+", "+C
     c_var_name(Arg_, CArg_),
     c_set_argument(Spec, out, CArg_, Arg_, L).
 
-c_set_argument_setof(Mode, Spec, CArg, Arg, "FI_unify_"+Mode+"_setof("+L+", "+Type+", "+Arg+", "+CArg+")") :-
+enum_name(enum(Name, _), Name).
+enum_name(tden(Name, _), Name).
+
+c_set_argument_setof(Mode, Spec, Dim, CArg, Arg, "FI_unify_"+Mode+"_setof("+L+", "+Type+", "+Mult+", "+Name+", "+Arg+", "+CArg+")") :-
     Arg_ = Arg+"_",
     c_var_name(Arg_, CArg_),
     ctype_decl(Spec, Type),
+    enum_name(Spec, Name),
+    c_dim_mult(Dim, Mult),
     c_set_argument(Spec, out, CArg_, Arg_, L).
 
 c_get_argument(list(S),     M, C, A, L) :- c_get_argument_rec(M, list, S, C, A, L).
@@ -1705,20 +1761,20 @@ c_get_argument(T-_,         M, C, A, L) :- c_get_argument_one(M, T, C, A, L).
 c_get_argument(chrs(_),     M, C, A, L) :- c_get_argument_chrs(M, C, A, L).
 c_get_argument(string(_),   M, C, A, L) :- c_get_argument_string(M, C, A, L).
 c_get_argument(tdef(_, S),  M, C, A, L) :- c_get_argument(S, M, C, A, L).
-c_get_argument(setof(_, S), M, C, A, L) :- c_get_argument_setof(M, S, C, A, L).
+c_get_argument(setof(_, _, S, D), M, C, A, L) :- c_get_argument_setof(M, S, D, C, A, L).
 c_get_argument(term,        _, C, A, "*"+C+"=PL_copy_term_ref("+A+")").
 
-c_get_argument_one(in, Type, CArg, Arg, "__rtc_FI_get("+Type+", "+Arg+", "+CArg+")").
+c_get_argument_one(in,    Type, CArg, Arg, "__rtc_FI_get("+Type+", "+Arg+", "+CArg+")").
 c_get_argument_one(inout, Type, CArg, Arg, "FI_get_inout("+Type+", "+Arg+", "+CArg+")").
 
-c_get_argument_type(in, Type, CArg, Arg, "__rtc_FI_get("+Type+", "+Arg+", "+CArg+")").
+c_get_argument_type(in,    Type, CArg, Arg, "__rtc_FI_get("+Type+", "+Arg+", "+CArg+")").
 c_get_argument_type(inout, Type, CArg, Arg, "FI_get_inout("+Type+", "+Arg+", "+CArg+")").
 
-c_get_argument_chrs(in, CArg, Arg, "__rtc_FI_get(chrs, "+Arg+", "+CArg+")").
-c_get_argument_chrs(inout, CArg, Arg, "FI_get_inout_chrs("+Arg+", "+CArg+")").
+c_get_argument_chrs(in,    CArg, Arg, "__rtc_FI_get(chrs, "+Arg+", "+CArg+")").
+c_get_argument_chrs(inout, CArg, Arg, "FI_get_inout_chrs(" +Arg+", "+CArg+")").
 
-c_get_argument_string(in, CArg, Arg, "__rtc_FI_get(string, "+Arg+", "+CArg+")").
-c_get_argument_string(inout, CArg, Arg, "FI_get_inout_string("+Arg+", "+CArg+")").
+c_get_argument_string(in,    CArg, Arg, "__rtc_FI_get(string, "+Arg+", "+CArg+")").
+c_get_argument_string(inout, CArg, Arg, "FI_get_inout_string(" +Arg+", "+CArg+")").
 
 c_get_argument_array(Spec, Dim, CArg, Arg, "FI_get_array("+L+","+CDim+", "+Arg+")") :-
     Arg_ = Arg+"_",
@@ -1732,12 +1788,16 @@ c_get_argument_rec(Mode, Type, Spec, CArg, Arg,
     c_var_name(Arg_, CArg_),
     c_get_argument(Spec, in, CArg_, Arg_, L).
 
-c_get_argument_setof(Mode, Spec, CArg, Arg,
-                     "FI_get_"+Mode+"_setof("+L+", "+Type+", "+Arg+", "+CArg+")") :-
+c_get_argument_setof(Mode, Spec, Dim, CArg, Arg,
+                     "FI_get_"+Mode+"_setof("+L+", "+Type+", "+Mult+", "+Dim+", "+Arg+", "+CArg+")") :-
     Arg_ = Arg+"_",
     c_var_name(Arg_, CArg_),
     ctype_decl(Spec, Type),
+    c_dim_mult(Dim, Mult),
     c_get_argument(Spec, in, CArg_, Arg_, L).
+
+c_dim_mult(1, single) :- !.
+c_dim_mult(_, vector).
 
 c_dim(Dim) --> {integer(Dim)}, !, acodes(Dim).
 c_dim(Dim) --> "_c_", acodes(Dim).
@@ -1773,7 +1833,10 @@ curr_bind_line(_, _, Arg, Spec, Mode, dec(Arg)-Line) :-
 curr_bind_line(arg, _, Arg, Spec, Mode, KeyLine) :-
     memberchk(Mode, [in, inout]),
     c_var_name(Arg, CArg1),
-    CArg = "&"+CArg1,
+    ( member(Spec, [setof(_, _, _, _)])
+    ->CArg = CArg1
+    ; CArg = "&"+CArg1
+    ),
     c_get_argument(Spec, Mode, CArg, Arg, GetArg),
     KeyLine = def(Arg)-["    "+GetArg+";"].
 curr_bind_line(dim(Arg), Head, Dim, _, _, def(CDim1)-LineL) :-
@@ -2015,27 +2078,33 @@ match_known_type(setof(Type, A), M, N, Spec, A) -->
       extend_args(Type, [E], Prop)
     },
     match_type(Prop, M, known, N, PSpec, E),
-    { ( PSpec = tdef(Name, ESpec)
+    { ( PSpec = tdef(EName, ESpec)
       ->true
       ; ESpec = PSpec,
-        Name = TName
+        EName = TName
       ),
       ( ( ESpec = enum(_, C)
         ->true
         ; ESpec = tden(_, C)
         ),
-        ( C =< 16
-        ->TName = short
-        ; C =< 32
-        ->TName = int
-        ; C =< 64
-        ->TName = long
-        ; C =< 128,
-          current_prolog_flag(address_bits, AB),
-          AB >= 64
-        ->TName = '__int128'
+        ( ( C =< 16
+          ->TName = short
+          ; C =< 32
+          ->TName = int
+          ; C =< 64
+          ->TName = long
+          )
+        ->Dim = 1
+        ; current_prolog_flag(address_bits, AB),
+          ( AB >= 64
+          ->TName = '__int128',
+            ElemSize = 128
+          ; TName = long,
+            ElemSize = AB
+          ),
+          Dim is (C+ElemSize-1)//ElemSize
         )
-      ->Spec = setof(Name, ESpec)
+      ->Spec = setof(EName, N, ESpec, Dim)
       ; Spec = list(PSpec)
       )
     }.
@@ -2071,10 +2140,7 @@ match_known_type(Type, M, _, Spec, A) -->
     ->( { PropL = [setof(EType, A)],
           nonvar(EType)
         }
-      ->{ Spec=setof(Name, ESpec),
-          extend_args(EType, [E], EProp)
-        },
-        match_type(EProp, M, known, Name, ESpec, E)
+      ->match_known_type(setof(EType, A), M, Name, Spec, A)
       ; { member(Glob, GlobL),
           normalize_ftgen(Glob, tgen(Opts, _)),
           nmember(tdef, Opts)

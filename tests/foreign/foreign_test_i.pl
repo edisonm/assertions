@@ -1,9 +1,10 @@
 :- module(foreign_test_i,
-          [f_enum_example/4, f_union_example/4, f_setof_enum/4, fce/2, fco/2,
-           aa/2, eq/2, idx/3, numl/2, io/1, f/1, get_arrays/4, show_arrays/3,
-           sio/1, negative_t/1, fortran1/2, positive_t/1, fd1/4, fd2/4, fd3/4,
-           extend/2, test_ireverse1/2, test_ireverse2/2, test_array/3,
-           fill_array/3]).
+          [ f_enum_example/4, f_union_example/4, f_setof_enum/4, fce/2, numl/2,
+            fco/2, aa/2, eq/2, idx/3, get_arrays/4, positive_t/1, negative_t/1,
+            show_arrays/3, fortran1/2, io/1, sio/1, fd1/4, fd2/4, test_array/3,
+            fill_array/3, test_ireverse1/2, test_ireverse2/2, f_setof_enum_2/4,
+            fd3/4, extend/2, f/1
+          ]).
 
 :- use_module(library(filesex)).
 :- use_module(library(neck)).
@@ -23,6 +24,25 @@
 
 :- type negative_t/1 is (foreign(is_negative_t), tgen([gett, unif])).
 
+/*
+:- type bool_t/1 + tgen.
+
+bool_t(fail).
+bool_t(true).
+
+:- type struct_example_t/1 + tgen.
+
+struct_example_t(apple).
+struct_example_t(orange).
+struct_example_t(banana(IsFrying)) :- bool_t(IsFrying).
+struct_example_t(rice(IsIntegral)) :- bool_t(IsIntegral).
+
+:- type setof_struct_examples_t/1 + tgen.
+
+setof_struct_examples_t(SExamples) :-
+    setof(struct_example_t, SExamples).
+*/
+
 :- type enum_example_t/1 + tgen.
 enum_example_t(element(1)).
 enum_example_t(element(a)).
@@ -38,9 +58,10 @@ setof_enum_s(S) :- setof(enum_example_t, S).
 :- pred f_setof_enum(+setof_enum_s, setof_enum_s, -setof_enum_s, -long) is foreign(c_setof_enum).
 
 :- type setof_body_s/1 + sgen.
-setof_body_s(setof_body(Label, Set)) :-
+setof_body_s(setof_body(Label, Set, Array)) :-
     atm(Label),
-    setof(enum_example_t, Set).
+    setof(enum_example_t, Set),
+    array(enum_example_t, [4], Array).
 
 :- type enum32_s/1 + sgen.
 enum32_s(X) :-
@@ -73,6 +94,19 @@ enum256_s(X) :-
 
 :- type setof_enum256_s/1 + sgen.
 setof_enum256_s(S) :- setof(enum256_s, S).
+
+:- type enum512_s/1 + sgen.
+enum512_s(X) :-
+    between(1, 512, X),
+    neck.
+
+:- type setof_enum512_t/1 + tgen.
+setof_enum512_t(S) :- setof(enum512_s, S).
+
+:- type array_enum_512_t/1 + tgen.
+array_enum512_t(A) :- array(enum512_s, [2], A).
+
+:- pred f_setof_enum_2(+setof_enum256_s, setof_enum256_s, -setof_enum256_s, -long) is foreign(c_setof_enum256).
 
 :- type temperature_t/1 + sgen.
 temperature_t(T) :- num(T).

@@ -345,9 +345,20 @@ typedef void * root_t;
 #define FI_array_length_ptr(__value)     FI_array_ptr(__value)
 #define FI_array_length(__value)         (*FI_array_length_ptr(__value))
 
-#define FI_is_element( __elem, __set) ((((typeof (__set))1)<<__elem & __set)!= 0)
-#define FI_add_element(__set, __elem) (__set |=  (((typeof (__set))1)<<__elem))
-#define FI_del_element(__set, __elem) (__set &= !(((typeof (__set))1)<<__elem))
-#define FI_xor_element(__set, __elem) (__set ^=  (((typeof (__set))1)<<__elem))
+#define FI_empty_set_single(__set, __dim) (__set = 0)
+#define FI_chk_element_single( __elem, __set) ((((typeof (__set))1)<<__elem & __set)!= 0)
+#define FI_add_element_single(__elem, __set) (__set |=  (((typeof (__set))1)<<__elem))
+#define FI_del_element_single(__elem, __set) (__set &= !(((typeof (__set))1)<<__elem))
+#define FI_xor_element_single(__elem, __set) (__set ^=  (((typeof (__set))1)<<__elem))
+
+#define BITS_PER_BYTE 8
+#define FI_elem_idx(__elem, __set) ((__elem / (sizeof(__set[0]) * BITS_PER_BYTE)))
+#define FI_elem_flg(__elem, __set) ((__elem % (sizeof(__set[0]) * BITS_PER_BYTE)))
+
+#define FI_empty_set_vector(__set, __dim) ({for (size_t i = 0; i < __dim; i++) __set[i] = 0;})
+#define FI_chk_element_vector( __elem, __set) (((__set)[FI_elem_idx(__elem, __set)] &   (((typeof (__set[0]))1)<<FI_elem_flg(__elem, __set)))!= 0)
+#define FI_add_element_vector(__elem, __set)  ((__set)[FI_elem_idx(__elem, __set)] |=  (((typeof (__set[0]))1)<<FI_elem_flg(__elem, __set)))
+#define FI_del_element_vector(__elem, __set)  ((__set)[FI_elem_idx(__elem, __set)] &= !(((typeof (__set[0]))1)<<FI_elem_flg(__elem, __set)))
+#define FI_xor_element_vector(__elem, __set)  ((__set)[FI_elem_idx(__elem, __set)] ^=  (((typeof (__set[0]))1)<<FI_elem_flg(__elem, __set)))
 
 #endif // __FOREIGN_INTERFACE_H__
