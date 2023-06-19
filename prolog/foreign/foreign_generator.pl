@@ -88,8 +88,7 @@
     link_foreign_library/2,
     pkg_foreign_config/2.
 
-% :- table
-%     type_props/5.
+:- table bind_type_names/2 as private.
 
 % Predefined foreign dependencies:
 
@@ -324,6 +323,7 @@ command_to_string(Command, ArgL, CommandS) :-
     atomic_list_concat([RCommand|ArgL], ' ', CommandS).
 
 generate_foreign_interface(Module, FilePl, IntL, BaseFile) :-
+    abolish_module_tables(foreign_generator),
     atom_concat(BaseFile, '_impl', BaseFileImpl),
     file_name_extension(BaseFileImpl, h, FileImpl_h),
     atom_concat(BaseFile, '_intf', BaseFileIntf),
@@ -459,7 +459,7 @@ apply_dict_tp(_-TypePropLDictL) :- maplist(apply_dict_tp_2, TypePropLDictL).
 
 apply_dict_tp_2(t(Type, PropL, GlobL, Dict)) :- apply_dict(Type-PropL-GlobL, Dict).
 
-auto_generated_types(M, t(Type, PropL, GlobL, Dict), t(Type, PropS, GlobL, Dict)) -->
+auto_generated_types(M, GlobL, p(Type, PropL, Dict), t(Type, PropS, GlobL, Dict)) -->
     { get_type_name(Type, Name),
       foldl(match_unknown_type(M, Name), PropL, PropTypeL1, []),
       foldl(cleanup_redundant(Type, PropL), PropTypeL1, PropTypeL, []),
@@ -499,12 +499,12 @@ type_props2(M, Type, TDict, TypePropLDictL, Asr) :-
     collect_prop(Asr, M, comp, TPropL),
     collect_prop(Asr, M, glob, TGlobL),
     ( TPropL \= []
-    ->TypePropLDictL1 = [t(Type, TPropL, TGlobL, TDict)]
-    ; bind_type_names(M:Type, TGlobL, TypePropLDictL1)
+    ->TypePropLDictL1 = [p(Type, TPropL, TDict)]
+    ; bind_type_names(M:Type, TypePropLDictL1)
     ->true
-    ; TypePropLDictL1 = [t(Type, [], TGlobL, TDict)]
+    ; TypePropLDictL1 = [p(Type, [], TDict)]
     ),
-    phrase(foldl(auto_generated_types(M), TypePropLDictL1, TypePropLDictL2),
+    phrase(foldl(auto_generated_types(M, TGlobL), TypePropLDictL1, TypePropLDictL2),
            TypePropLDictL3, [Type-TypePropLDictL2]),
     maplist(resolve_special_terms, TypePropLDictL3, TypePropLDictL).
 
@@ -949,10 +949,10 @@ fg_numbervars([V|Vs], N, Dict) :-
       fg_numbervars(Vs, N1, Dict)
     ).
 
-bind_type_names(MType, TGlobL, TypeMPropLDictL) :-
+bind_type_names(MType, TypeMPropLDictL) :-
     predicate_property(MType, interpreted),
     strip_module(MType, _, Type),
-    findall(t(Type, MPropL, TGlobL, Dict),
+    findall(p(Type, MPropL, Dict),
             bind_tn_clause(MType, MPropL, Dict),
             TypeMPropLDictL).
 
@@ -2098,8 +2098,8 @@ type_is_tdef(M, Type, Spec, A) :-
     functor(Head, TName, Arity),
     type_props1(M, Head, _, _, Asr),
     \+ curr_prop_asr(comp, _, _, Asr),
-    bind_type_names(M:Head, [], TypeMPropLDictL),
-    TypeMPropLDictL = [t(Head, [Prop], _, _)],
+    bind_type_names(M:Head, TypeMPropLDictL),
+    TypeMPropLDictL = [p(Head, [Prop], _)],
     arg(Arity, Head, A),
     arg(Arity, Prop, B),
     A==B,
