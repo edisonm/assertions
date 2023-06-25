@@ -571,10 +571,9 @@ define_aux_variables(dict_key_value(_, _, _, _), _, _) --> !, {fail}.
 define_aux_variables(_, _, _) --> [].
 
 implement_type_getter_ini(PName, CName, Spec, Name) -->
-    { ctype_iarg_decl(Spec, Decl1),
-      ( memberchk(Spec, [array(_, _), setof(_, _, _, _)])
-      ->Decl = Decl1
-      ; Decl = Decl1+"*"
+    { ( memberchk(Spec, [array(_, _), setof(_, _, _, _)])
+      ->Decl = Name
+      ; Decl = Name+"*"
       )
     },
     ["int FI_get_"+Name+"(root_t __root, term_t "+PName+", "+Decl+" "+CName+") {"].
@@ -933,22 +932,14 @@ spec_pointer(list(_)).
 spec_pointer(tdef(_, Spec)) :- spec_pointer(Spec).
 % spec_pointer(type(_)).
 
-ctype_iarg_decl(setof( _, Name, _, _)) --> !, acodes(Name).
-ctype_iarg_decl(Spec) --> ctype_decl(Spec).
-
-ctype_iarg_decl(Spec, Decl) :-
-    ctype_iarg_decl(Spec, Codes, []),
-    atom_codes(Decl, Codes).
-
 implement_type_unifier_ini(PName, CName, Name, Spec) -->
-    { ctype_iarg_decl(Spec, Decl),
-      ( \+ref_type(Spec)
+    { ( \+ref_type(Spec)
       ->DRef = ""
       ; DRef = "*"
       ),
       ctype_suff(Spec, Suff)
     },
-    ["int FI_unify_"+Name+"(term_t "+PName+", "+Decl+DRef+" const "+CName+Suff+") {"].
+    ["int FI_unify_"+Name+"(term_t "+PName+", "+Name+DRef+" const "+CName+Suff+") {"].
 
 apply_name(Name=Value) :-
     camel_snake(Name, Arg),
@@ -1168,18 +1159,16 @@ declare_type_(dict_end(_, _, _), _, _, _) --> [].
 declare_type_(dict_rec(_, _, _, _, _), _, _, _) --> [].
 
 declare_type(gett, Name, Spec) -->
-    { ctype_iarg_decl(Spec, Decl1),
-      ( memberchk(Spec, [array(_, _), setof(_, _, _, _)])
-      ->Decl = Decl1
-      ; Decl = Decl1+"*"
+    { ( memberchk(Spec, [array(_, _), setof(_, _, _, _)])
+      ->Decl = Name
+      ; Decl = Name+"*"
       )
     },
     ["int FI_get_"+Name+"(root_t __root, term_t, "+Decl+");"].
 declare_type(unif, Name, Spec) -->
-    { ctype_iarg_decl(Spec, Decl1),
-      ( \+ref_type(Spec)
-      ->DRef = Decl1
-      ; DRef = Decl1+"*"
+    { ( \+ref_type(Spec)
+      ->DRef = Name
+      ; DRef = Name+"*"
       )
     },
     ["int FI_unify_"+Name+"(term_t, "+DRef+" const);"].
@@ -1235,20 +1224,8 @@ type_components_1(M, Call, Loc, Type-TypePropLDictL) -->
       ; forall(member(t(Type, PropL, _, _), TypePropLDictL), PropL = [])
       ->SubType = enum,
         length(TypePropLDictL, N),
-        ( member(t(_, _, GlobL, _), TypePropLDictL),
-          member(Glob, GlobL),
-          normalize_ftgen(Glob, tgen(Opts, _)),
-          nmember(tdef, Opts)
-        ->Spec = tden(Name, N)
-        ; Spec = enum(Name, N)
-        )
-      ; ( member(t(_, _, GlobL, _), TypePropLDictL),
-          member(Glob, GlobL),
-          normalize_ftgen(Glob, tgen(Opts, _)),
-          nmember(tdef, Opts)
-        ->Spec = tdfstr(Name)
-        ; Spec = struct(Name)
-        ),
+        Spec = enum(Name, N)
+      ; Spec = struct(Name),
         ( TypePropLDictL = [_, _|_]
         ->SubType = union,
           ISpec = struct(Name)
@@ -1257,9 +1234,16 @@ type_components_1(M, Call, Loc, Type-TypePropLDictL) -->
         )
       )
     },
-    call(Call, union_ini(SubType, Spec, TypePropLDictL), Type, Name),
+    { nb_setval('$recursive', fail),
+      nb_setval('$type_name', Name)
+    },
+    [UnionIni],
     foldl(type_components_one(M, SubType, ISpec, Name, Call, Loc), TypePropLDictL),
-    call(Call, union_end(SubType, Spec), Type, Name).
+    {phrase(call(Call, union_ini(SubType, Spec, TypePropLDictL), Type, Name), UnionIni)},
+    call(Call, union_end(SubType, Spec), Type, Name),
+    { nb_setval('$recursive', fail),
+      nb_setval('$type_name', $$$$)
+    }.
 
 type_components_one(M, SubType, TSpec, Name, Call, Loc, t(Type, PropL, _, _)) -->
     { functor(Type, _, Arity),
@@ -1273,7 +1257,7 @@ type_components_one(M, SubType, TSpec, Name, Call, Loc, t(Type, PropL, _, _)) --
       ; atom(Term),
         SubType = union
       }
-    ->call(Call, func_ini(SubType, TSpec), Term, Name),
+    ->[FuncIni],
       ( {compound(Term)}
       ->findall(Lines,
                 ( arg(N, Term, Arg),
@@ -1301,6 +1285,7 @@ type_components_one(M, SubType, TSpec, Name, Call, Loc, t(Type, PropL, _, _)) --
         )
       ; []
       ),
+      {phrase(call(Call, func_ini(SubType, TSpec), Term, Name), FuncIni)},
       call(Call, func_end(SubType, TSpec), Term, Name)
     ; { select(dict_t(Desc, Term), PropL, PropL1)
       ; select(dict_t(Tag, Desc, Term), PropL, PropL1)
@@ -1491,31 +1476,27 @@ is_ref(_, out).
 
 % Types that are passed by reference
 ref_type(struct(_)).
-ref_type(tdfstr(_)).
 ref_type(tdef(_, Spec)) :- ref_type(Spec).
 
-ctype_ini(tdfstr(Name))   --> "typedef struct __", acodes(Name), " ", acodes(Name), ";\n",
-                              "struct __", acodes(Name).
-ctype_ini(struct(Name))   --> "struct ", acodes(Name).
-ctype_ini(tden(_, _))     --> "typedef enum".
-ctype_ini(enum(Name, _))  --> "enum ", acodes(Name).
-ctype_ini(cdef(_))        --> "".
+ctype_ini(struct(Name))    --> \+ {nb_current('$recursive', true)}, !, "typedef struct ", acodes(Name).
+/* None: we need to use __Name for the typedef struct, in order to let recursive types work */
+ctype_ini(struct(Name))    --> "typedef struct __", acodes(Name), " ", acodes(Name), ";\n",
+                               "struct __", acodes(Name).
+ctype_ini(enum(_, _))      --> "typedef enum".
+ctype_ini(cdef(_))         --> "".
 
-ctype_end(tdfstr(_))      --> "".
-ctype_end(struct(_))      --> "".
-ctype_end(tden(Name, _))  --> " ", acodes(Name).
-ctype_end(enum(_, _))     --> "".
-ctype_end(cdef(Name))     --> " ", acodes(Name).
+ctype_end(struct(Name))    --> \+ {nb_current('$recursive', true)}, !, " ", acodes(Name).
+ctype_end(struct(_))       --> "".
+ctype_end(enum(Name, _))   --> " ", acodes(Name).
+ctype_end(cdef(Name))      --> " ", acodes(Name).
 
+ctype_decl(struct(Name))   --> acodes(Name).
 ctype_decl(list(Spec))     --> ctype_decl(Spec), "*".
 ctype_decl(array(Spec, _)) --> ctype_decl(Spec).
 ctype_decl(ptr(Spec))      --> ctype_decl(Spec), "*".
 ctype_decl(chrs(Name))     --> acodes(Name).
 ctype_decl(string(Name))   --> acodes(Name).
-ctype_decl(tdfstr(Name))   --> acodes(Name).
-ctype_decl(struct(Name))   --> "struct ", acodes(Name).
-ctype_decl(tden(Name, _))  --> acodes(Name).
-ctype_decl(enum(Name, _))  --> "enum ", acodes(Name).
+ctype_decl(enum(Name, _))  --> acodes(Name).
 ctype_decl(term)           --> "term_t".
 ctype_decl(tdef(Name, _))  --> acodes(Name).
 ctype_decl(setof(Name, _, _, _)) --> acodes(Name).
@@ -1703,9 +1684,7 @@ declare_forg_impl(Head, M, Module, Comp, Call, Succ, Glob, Bind, _ImplHead) -->
 c_set_argument(list(S),     _, C, A, L) :- c_set_argument_rec(list, S, C, A, L).
 c_set_argument(array(S, D), _, C, A, L) :- c_set_argument_array(S, D, C, A, L).
 c_set_argument(ptr(S),      _, C, A, L) :- c_set_argument_rec(ptr, S, C, A, L).
-c_set_argument(tdfstr(T),   M, C, A, L) :- c_set_argument_type(M, T, C, A, L).
 c_set_argument(struct(T),   M, C, A, L) :- c_set_argument_type(M, T, C, A, L).
-c_set_argument(tden(T, _),  M, C, A, L) :- c_set_argument_one(M, T, C, A, L).
 c_set_argument(enum(T, _),  M, C, A, L) :- c_set_argument_one(M, T, C, A, L).
 c_set_argument(cdef(T),     M, C, A, L) :- c_set_argument_one(M, T, C, A, L).
 c_set_argument(T-_,         M, C, A, L) :- c_set_argument_one(M, T, C, A, L).
@@ -1739,7 +1718,6 @@ c_set_argument_rec(Type, Spec, CArg, Arg, "FI_unify_"+Type+"("+L+", "+Arg+", "+C
     c_set_argument(Spec, out, CArg_, Arg_, L).
 
 enum_name(enum(Name, _), Name).
-enum_name(tden(Name, _), Name).
 
 c_set_argument_setof(Mode, Spec, Dim, CArg, Arg, "FI_unify_"+Mode+"_setof("+L+", "+Type+", "+Mult+", "+Name+", "+Arg+", "+CArg+")") :-
     Arg_ = Arg+"_",
@@ -1752,9 +1730,7 @@ c_set_argument_setof(Mode, Spec, Dim, CArg, Arg, "FI_unify_"+Mode+"_setof("+L+",
 c_get_argument(list(S),     M, C, A, L) :- c_get_argument_rec(M, list, S, C, A, L).
 c_get_argument(array(S, D), _, C, A, L) :- c_get_argument_array(S, D, C, A, L).
 c_get_argument(ptr(S),      M, C, A, L) :- c_get_argument_rec(M, ptr,  S, C, A, L).
-c_get_argument(tdfstr(T),   M, C, A, L) :- c_get_argument_type(M, T, C, A, L).
 c_get_argument(struct(T),   M, C, A, L) :- c_get_argument_type(M, T, C, A, L).
-c_get_argument(tden(T, _),  M, C, A, L) :- c_get_argument_one(M, T, C, A, L).
 c_get_argument(enum(T, _),  M, C, A, L) :- c_get_argument_one(M, T, C, A, L).
 c_get_argument(cdef(T),     M, C, A, L) :- c_get_argument_one(M, T, C, A, L).
 c_get_argument(T-_,         M, C, A, L) :- c_get_argument_one(M, T, C, A, L).
@@ -1900,8 +1876,7 @@ bind_outs_arguments(Head, M, CM, Comp, Call, Succ, Glob, (_ as _/BN +_)) -->
                 bind_argument(Head, M, CM, Comp, Call, Succ, Glob, Arg, Spec, Mode),
                 memberchk(Mode, [in, inout]),
                 ( Mode = in,
-                  Spec \= struct(_),
-                  Spec \= tdfstr(_)
+                  Spec \= struct(_)
                 ->CArg = Arg
                 ; CArg = "*"+Arg
                 ),
@@ -2007,7 +1982,12 @@ get_dictionary(Term, File, Line, M, Dict) :-
     ).
 
 match_known_type(Prop, M, Name, Spec, Arg) :-
-    match_type(Prop, M, known, Name, Spec, Arg, _, _).
+    match_type(Prop, M, known, Name, Spec, Arg, _, _),
+    ( nb_current('$type_name', TName),
+      sub_term(TName, Spec)
+    ->nb_setval('$recursive', true)
+    ; true
+    ).
 
 match_type(M:Prop,       _, K, Name, Spec, Arg) -->
     ( match_type(Prop, M, K, Name, Spec, Arg)
@@ -2083,10 +2063,7 @@ match_known_type(setof(Type, A), M, N, Spec, A) -->
       ; ESpec = PSpec,
         EName = TName
       ),
-      ( ( ESpec = enum(_, C)
-        ->true
-        ; ESpec = tden(_, C)
-        ),
+      ( ESpec = enum(_, C),
         ( ( C =< 16
           ->TName = short
           ; C =< 32
@@ -2125,28 +2102,17 @@ match_known_type(Type, M, _, Spec, A) -->
         forall(member(t(Head, PropL, _, _), TypePropLDictL), PropL = [])
       }
     ->{ length(TypePropLDictL, N),
-        ( member(t(_, _, GlobL, _), TypePropLDictL),
-          member(Glob, GlobL),
-          normalize_ftgen(Glob, tgen(Opts, _)),
-          nmember(tdef, Opts)
-        ->Spec=tden(Name, N)
-        ; Spec=enum(Name, N)
-        )
+        Spec=enum(Name, N)
       }
     ; { member(_-TypePropLDictL, HeadTypePropLDictL),
-        member(t(Head, PropL, GlobL, _), TypePropLDictL),
+        member(t(Head, PropL, _, _), TypePropLDictL),
         PropL \= []
       }
     ->( { PropL = [setof(EType, A)],
           nonvar(EType)
         }
       ->match_known_type(setof(EType, A), M, Name, Spec, A)
-      ; { member(Glob, GlobL),
-          normalize_ftgen(Glob, tgen(Opts, _)),
-          nmember(tdef, Opts)
-        ->Spec=tdfstr(Name)
-        ; Spec=struct(Name)
-        }
+      ; {Spec=struct(Name)}
       )
     ),
     !.

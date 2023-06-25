@@ -18,7 +18,7 @@ test(union_example) :-
     f_union_example(pair(2,3), X, Y, I),
     assertion(I==2),
     assertion(X==Y),
-    assertion(X==d(d{value1:a,value2:[b,c,d]})).
+    assertion(X==d(e{value1:a,value2:[b,c,d]})).
 
 test(setof_enum) :-
     f_setof_enum([element(1), element_3], X, Y, I),

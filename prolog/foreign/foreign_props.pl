@@ -57,7 +57,6 @@
            setof/2,
            float_t/1,
            size_t/1,
-           sgen/1,
            tgen/1,
            tgen/2,
            dict_t/2,
@@ -98,13 +97,11 @@ normalize_ftype(nimport(   G), foreign([lang(native), prefix('')], G)).
 
 :- type ftype_spec/1.
 
-ftype_spec(tdef). % Use typedef to implement the type
 ftype_spec(decl). % Generate the equivalent struct/enum declaration for the given type
 ftype_spec(gett). % Generate the getter of the given type
 ftype_spec(unif). % Generate the unifier of the given type
 
-normalize_ftgen(tgen(   G), tgen([tdef, decl, gett, unif], G)).
-normalize_ftgen(sgen(   G), tgen([decl, gett, unif], G)).
+normalize_ftgen(tgen(   G), tgen([decl, gett, unif], G)).
 normalize_ftgen(tgen(O, G), tgen(O, G)).
 
 %!  native(+ForeignSpec, :Predicate)
@@ -127,7 +124,6 @@ normalize_ftgen(tgen(O, G), tgen(O, G)).
 :- global foreign(callable).
 :- global fimport(callable).
 :- global nimport(callable).
-:- global sgen(callable).
 :- global tgen(callable).
 :- global tgen(nlist(ftype_spec), callable).
 
