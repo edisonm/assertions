@@ -24,7 +24,6 @@
 
 :- type negative_t/1 is (foreign(is_negative_t), tgen([gett, unif])).
 
-/*
 :- type bool_t/1 + tgen.
 
 bool_t(fail).
@@ -41,7 +40,6 @@ struct_example_t(rice(IsIntegral)) :- bool_t(IsIntegral).
 
 setof_struct_examples_t(SExamples) :-
     setof(struct_example_t, SExamples).
-*/
 
 :- type enum_example_t/1 + tgen.
 enum_example_t(element(1)).

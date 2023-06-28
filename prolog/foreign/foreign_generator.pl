@@ -927,7 +927,7 @@ implement_type_unifier(dict_end(SubType, _, Tag), _, Term) -->
 spec_pointer(chrs(_)).
 spec_pointer(string(_)).
 spec_pointer(ptr(_)).
-spec_pointer(pointer-_).
+spec_pointer(ntype(_, pointer)).
 spec_pointer(list(_)).
 spec_pointer(tdef(_, Spec)) :- spec_pointer(Spec).
 % spec_pointer(type(_)).
@@ -1407,20 +1407,20 @@ declare_foreign_head(Head, M, CM, Comp, Call, Succ, Glob, CN, CN+"("+ArgL/", "+"
                      ( compound(Head),
                        arg(_, Head, Arg),
                        bind_argument(Head, M, CM, Comp, Call, Succ, Glob, Arg, Spec, Mode),
-                       curr_arg_decl(Arg, Spec, Mode, Key-Line)
+                       curr_arg_decl(Arg, Spec, Mode, Key, Line)
                      )))
            ), ArgL).
 
-extra_arg_decl(array(Spec, Dim), KeyLine) :-
+extra_arg_decl(array(Spec, Dim), Key, Line) :-
     ( \+ integer(Dim),
-      curr_arg_decl(Dim, size_t-size_t, in, KeyLine)
-    ; extra_arg_decl(Spec, KeyLine)
+      curr_arg_decl(Dim, ntype(size_t, size_t), in, Key, Line)
+    ; extra_arg_decl(Spec, Key, Line)
     ).
 
-curr_arg_decl(_, Spec, Mode, KeyLine) :-
+curr_arg_decl(_, Spec, Mode, Key, Line) :-
     memberchk(Mode, [in, inout]),
-    extra_arg_decl(Spec, KeyLine).
-curr_arg_decl(Arg, Spec, Mode, Arg-(Decl+" "+Arg+Suff)) :-
+    extra_arg_decl(Spec, Key, Line).
+curr_arg_decl(Arg, Spec, Mode, Arg, Decl+" "+Arg+Suff) :-
     ctype_barg_decl(Spec, Mode, Decl),
     ctype_barg_suff(Spec, Suff).
 
@@ -1478,30 +1478,30 @@ is_ref(_, out).
 ref_type(struct(_)).
 ref_type(tdef(_, Spec)) :- ref_type(Spec).
 
-ctype_ini(struct(Name))    --> \+ {nb_current('$recursive', true)}, !, "typedef struct ", acodes(Name).
-/* None: we need to use __Name for the typedef struct, in order to let recursive types work */
-ctype_ini(struct(Name))    --> "typedef struct __", acodes(Name), " ", acodes(Name), ";\n",
-                               "struct __", acodes(Name).
-ctype_ini(enum(_, _))      --> "typedef enum".
-ctype_ini(cdef(_))         --> "".
+ctype_ini(struct(CType))    --> \+ {nb_current('$recursive', true)}, !, "typedef struct ", acodes(CType).
+/* None: we need to use __CType for the typedef struct, in order to let recursive types work */
+ctype_ini(struct(CType))    --> "typedef struct __", acodes(CType), " ", acodes(CType), ";\n",
+                               "struct __", acodes(CType).
+ctype_ini(enum(_, _))       --> "typedef enum".
+ctype_ini(cdef(_))          --> "".
 
-ctype_end(struct(Name))    --> \+ {nb_current('$recursive', true)}, !, " ", acodes(Name).
-ctype_end(struct(_))       --> "".
-ctype_end(enum(Name, _))   --> " ", acodes(Name).
-ctype_end(cdef(Name))      --> " ", acodes(Name).
+ctype_end(struct(CType))    --> \+ {nb_current('$recursive', true)}, !, " ", acodes(CType).
+ctype_end(struct(_))        --> "".
+ctype_end(enum(CType, _))   --> " ", acodes(CType).
+ctype_end(cdef(CType))      --> " ", acodes(CType).
 
-ctype_decl(struct(Name))   --> acodes(Name).
-ctype_decl(list(Spec))     --> ctype_decl(Spec), "*".
-ctype_decl(array(Spec, _)) --> ctype_decl(Spec).
-ctype_decl(ptr(Spec))      --> ctype_decl(Spec), "*".
-ctype_decl(chrs(Name))     --> acodes(Name).
-ctype_decl(string(Name))   --> acodes(Name).
-ctype_decl(enum(Name, _))  --> acodes(Name).
-ctype_decl(term)           --> "term_t".
-ctype_decl(tdef(Name, _))  --> acodes(Name).
-ctype_decl(setof(Name, _, _, _)) --> acodes(Name).
-ctype_decl(cdef(Name))     --> acodes(Name).
-ctype_decl(_-CType)        --> acodes(CType).
+ctype_decl(struct(CType))   --> acodes(CType).
+ctype_decl(list(Spec))      --> ctype_decl(Spec), "*".
+ctype_decl(array(Spec, _))  --> ctype_decl(Spec).
+ctype_decl(ptr(Spec))       --> ctype_decl(Spec), "*".
+ctype_decl(chrs(CType))     --> acodes(CType).
+ctype_decl(string(CType))   --> acodes(CType).
+ctype_decl(enum(CType, _))  --> acodes(CType).
+ctype_decl(term)            --> "term_t".
+ctype_decl(tdef(CType, _))  --> acodes(CType).
+ctype_decl(setof(CType, _, _, _)) --> acodes(CType).
+ctype_decl(cdef(CType))     --> acodes(CType).
+ctype_decl(ntype(CType, _))         --> acodes(CType).
 
 ctype_ini(Spec, Decl) :- phrase(ctype_ini(Spec), Codes), atom_codes(Decl, Codes).
 ctype_end(Spec, Decl) :- phrase(ctype_end(Spec), Codes), atom_codes(Decl, Codes).
@@ -1687,7 +1687,7 @@ c_set_argument(ptr(S),      _, C, A, L) :- c_set_argument_rec(ptr, S, C, A, L).
 c_set_argument(struct(T),   M, C, A, L) :- c_set_argument_type(M, T, C, A, L).
 c_set_argument(enum(T, _),  M, C, A, L) :- c_set_argument_one(M, T, C, A, L).
 c_set_argument(cdef(T),     M, C, A, L) :- c_set_argument_one(M, T, C, A, L).
-c_set_argument(T-_,         M, C, A, L) :- c_set_argument_one(M, T, C, A, L).
+c_set_argument(ntype(_, T), M, C, A, L) :- c_set_argument_one(M, T, C, A, L).
 c_set_argument(chrs(_),     M, C, A, L) :- c_set_argument_chrs(M, C, A, L).
 c_set_argument(string(_),   M, C, A, L) :- c_set_argument_string(M, C, A, L).
 c_set_argument(tdef(_, S),  M, C, A, L) :- c_set_argument(S, M, C, A, L).
@@ -1733,7 +1733,7 @@ c_get_argument(ptr(S),      M, C, A, L) :- c_get_argument_rec(M, ptr,  S, C, A, 
 c_get_argument(struct(T),   M, C, A, L) :- c_get_argument_type(M, T, C, A, L).
 c_get_argument(enum(T, _),  M, C, A, L) :- c_get_argument_one(M, T, C, A, L).
 c_get_argument(cdef(T),     M, C, A, L) :- c_get_argument_one(M, T, C, A, L).
-c_get_argument(T-_,         M, C, A, L) :- c_get_argument_one(M, T, C, A, L).
+c_get_argument(ntype(_, T), M, C, A, L) :- c_get_argument_one(M, T, C, A, L).
 c_get_argument(chrs(_),     M, C, A, L) :- c_get_argument_chrs(M, C, A, L).
 c_get_argument(string(_),   M, C, A, L) :- c_get_argument_string(M, C, A, L).
 c_get_argument(tdef(_, S),  M, C, A, L) :- c_get_argument(S, M, C, A, L).
@@ -1788,16 +1788,16 @@ ctype_c_suff(Spec, Suff) :-
     ctype_c_suff(Spec, Codes, []),
     atom_codes(Suff, Codes).
 
-extra_var_def(array(Spec, Dim), Head, Arg, KeyLine) :-
+extra_var_def(array(Spec, Dim), Head, Arg, Key, Line) :-
     ( \+ integer(Dim),
-      curr_bind_line(dim(Arg), Head, Dim, size_t-size_t, in, KeyLine)
-    ; extra_var_def(Spec, Head, Arg+"_"+Dim, KeyLine)
+      curr_bind_line(dim(Arg), Head, Dim, ntype(size_t, size_t), in, Key, Line)
+    ; extra_var_def(Spec, Head, Arg+"_"+Dim, Key, Line)
     ).
 
-curr_bind_line(arg, Head, Arg, Spec, Mode, KeyLine) :-
+curr_bind_line(arg, Head, Arg, Spec, Mode, Key, Line) :-
     memberchk(Mode, [in, inout]),
-    extra_var_def(Spec, Head, Arg, KeyLine).
-curr_bind_line(_, _, Arg, Spec, Mode, dec(Arg)-Line) :-
+    extra_var_def(Spec, Head, Arg, Key, Line).
+curr_bind_line(_, _, Arg, Spec, Mode, dec(Arg), Line) :-
     ctype_arg_decl(Spec, Mode, Decl),
     c_var_name(Arg, CArg),
     ( Spec = term
@@ -1806,7 +1806,7 @@ curr_bind_line(_, _, Arg, Spec, Mode, dec(Arg)-Line) :-
       DN=" "+CArg+CSuff+";"
     ),
     Line = "    "+Decl+DN.
-curr_bind_line(arg, _, Arg, Spec, Mode, KeyLine) :-
+curr_bind_line(arg, _, Arg, Spec, Mode, def(Arg), Line) :-
     memberchk(Mode, [in, inout]),
     c_var_name(Arg, CArg1),
     ( member(Spec, [setof(_, _, _, _)])
@@ -1814,8 +1814,8 @@ curr_bind_line(arg, _, Arg, Spec, Mode, KeyLine) :-
     ; CArg = "&"+CArg1
     ),
     c_get_argument(Spec, Mode, CArg, Arg, GetArg),
-    KeyLine = def(Arg)-["    "+GetArg+";"].
-curr_bind_line(dim(Arg), Head, Dim, _, _, def(CDim1)-LineL) :-
+    Line = ["    "+GetArg+";"].
+curr_bind_line(dim(Arg), Head, Dim, _, _, def(CDim1), LineL) :-
     \+ arg(_, Head, Dim),
     c_var_name(Dim, CDim1),
     CDim = "&"+CDim1,
@@ -1835,7 +1835,7 @@ bind_arguments(Head, M, CM, Comp, Call, Succ, Glob, Bind, Return) -->
                   Key, % This hack allows automatic definition of dimensions on input arrays
                   ( arg(_, Head, Arg),
                     bind_argument(Head, M, CM, Comp, Call, Succ, Glob, Arg, Spec, Mode),
-                    curr_bind_line(arg, Head, Arg, Spec, Mode, Key-Line)
+                    curr_bind_line(arg, Head, Arg, Spec, Mode, Key, Line)
                   )
               ))
     ; []
@@ -1951,7 +1951,7 @@ generate_foreign_call((CN/_A as _ + _)-Head1, M, CM, Comp, Call, Succ, Glob, Ret
 
 extra_arg_call(array(Spec, Dim), KeyLine) :-
     ( \+ integer(Dim),
-      curr_arg_call(Dim, size_t-size_t, in, KeyLine)
+      curr_arg_call(Dim, ntype(size_t, size_t), in, KeyLine)
     ; extra_arg_call(Spec, KeyLine)
     ).
 
@@ -2016,24 +2016,24 @@ match_known_array([], T, A, M, N, MSpec, A) -->
 match_known_array([D|L], T, A, M, N, array(Spec, D), A) -->
     match_known_array(L, T, E, M, N, Spec, E).
 
-match_known_type(atm(A),            _, _, chrs('char*'),   A) --> [].
-match_known_type(atom(A),           _, _, chrs('char*'),   A) --> [].
-match_known_type(str(A),            _, _, string('char*'), A) --> [].
-match_known_type(string(A),         _, _, string('char*'), A) --> [].
-match_known_type(ptr(A),            _, _, pointer-'void*', A) --> [].
-match_known_type(long(A),           _, _, long-long,       A) --> [].
-match_known_type(int(A),            _, _, integer-int,     A) --> [].
-match_known_type(int64(A),          _, _, int64-int64_t,   A) --> [].
-match_known_type(nnegint(A),        _, _, integer-'unsigned int', A) --> [].
-match_known_type(integer(A),        _, _, integer-int,     A) --> [].
-match_known_type(character_code(A), _, _, char_code-char,  A) --> [].
-match_known_type(char(A),           _, _, char-char,       A) --> [].
-match_known_type(num(A),            _, _, float-double,    A) --> [].
-match_known_type(size_t(A),         _, _, size_t-size_t,   A) --> [].
-match_known_type(float_t(A),        _, _, float_t-float,   A) --> [].
-match_known_type(number(A),         _, _, float-double,    A) --> [].
-match_known_type(term(A),           _, _, term,            A) --> [].
-match_known_type(type(Type, A),     M, N, MSpec,           A) -->
+match_known_type(atm(A),            _, _, chrs('char*'),           A) --> [].
+match_known_type(atom(A),           _, _, chrs('char*'),           A) --> [].
+match_known_type(str(A),            _, _, string('char*'),         A) --> [].
+match_known_type(string(A),         _, _, string('char*'),         A) --> [].
+match_known_type(ptr(A),            _, _, ntype('void*', pointer), A) --> [].
+match_known_type(long(A),           _, _, ntype(long, long),       A) --> [].
+match_known_type(int(A),            _, _, ntype(int, integer),     A) --> [].
+match_known_type(int64(A),          _, _, ntype(int64_t, int64),   A) --> [].
+match_known_type(nnegint(A),        _, _, ntype('unsigned int', integer), A) --> [].
+match_known_type(integer(A),        _, _, ntype(int, integer),     A) --> [].
+match_known_type(character_code(A), _, _, ntype(char, char_code),  A) --> [].
+match_known_type(char(A),           _, _, ntype(char, char),       A) --> [].
+match_known_type(num(A),            _, _, ntype(double, float),    A) --> [].
+match_known_type(size_t(A),         _, _, ntype(size_t, size_t),   A) --> [].
+match_known_type(float_t(A),        _, _, ntype(float, float_t),   A) --> [].
+match_known_type(number(A),         _, _, ntype(double, float),    A) --> [].
+match_known_type(term(A),           _, _, term,                    A) --> [].
+match_known_type(type(Type, A),     M, N, MSpec,                   A) -->
     {nonvar(Type)},
     match_known_type_type(Type, A, M, N, MSpec, A).
 match_known_type(array(Type, DimL, A), M, N, MSpec, A) -->
