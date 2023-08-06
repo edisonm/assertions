@@ -193,7 +193,7 @@
             FI_get_list(__FI_get_elem, __term, __value);        \
         })
 
-#define FI_get_setof(__FI_get_elem, __type, __mult, __dim, __term, __value) ({ \
+#define FI_get_setof(__FI_get_elem, __type, __mult, __dim, __name, __term, __value) ({ \
             term_t __term##_ = PL_new_term_ref();			\
             term_t __tail = PL_copy_term_ref(__term);			\
             __tail = PL_copy_term_ref(__term);                          \
@@ -207,19 +207,19 @@
             __rtcheck(PL_get_nil(__tail));				\
         })
 
-#define FI_get_inout_setof(__FI_get_elem, __type, __mult, __dim, __term, __value) ({ \
+#define FI_get_inout_setof(__FI_get_elem, __type, __mult, __dim, __name, __term, __value) ({ \
             if(PL_is_variable(__term)) {                                \
                 __value = NULL;                                         \
             }                                                           \
             else {                                                      \
                 FI_new_value(__value);                                  \
-                FI_get_setof(__FI_get_elem, __type, __mult, __dim, __term, (*__value)); \
+                FI_get_setof(__FI_get_elem, __type, __mult, __dim, __name, __term, (*__value)); \
             }                                                           \
         })
     
-#define FI_get_in_setof(__FI_get_elem, __type, __mult, __dim, __term, __value) ({ \
+#define FI_get_in_setof(__FI_get_elem, __type, __mult, __dim, __name, __term, __value) ({ \
             __rtctype(!PL_is_variable(__term), __term, __value);        \
-            FI_get_setof(__FI_get_elem, __type, __mult, __dim, __term, __value); \
+            FI_get_setof(__FI_get_elem, __type, __mult, __dim, __name, __term, __value); \
         })
 
 #define FI_get_ptr(__FI_get_elem, __term, __value) ({	        \
@@ -277,7 +277,7 @@
             }                                                           \
         })
 
-#define FI_unify_setof(__FI_unify_elem, __type, __mult, __name, __term, __value) ({ \
+#define FI_unify_setof(__FI_unify_elem, __type, __mult, __dim, __name, __term, __value) ({ \
             term_t l = PL_copy_term_ref(__term);			\
             term_t __term##_ = PL_new_term_ref();			\
             for(size_t _c_##__term##_ = 0; _c_##__term##_ < __name##_NUM; _c_##__term##_++) { \
@@ -289,12 +289,12 @@
             __rtcheck(PL_unify_nil(l));                                 \
         })
 
-#define FI_unify_out_setof(__FI_unify_elem, __type, __mult, __name, __term, __value) \
-    FI_unify_setof(__FI_unify_elem, __type, __mult, __name, __term, __value)
+#define FI_unify_out_setof(__FI_unify_elem, __type, __mult, __dim, __name, __term, __value) \
+    FI_unify_setof(__FI_unify_elem, __type, __mult, __dim, __name, __term, __value)
 
-#define FI_unify_inout_setof(__FI_unify_elem, __type, __mult, __name, __term, __value) ({ \
+#define FI_unify_inout_setof(__FI_unify_elem, __type, __mult, __dim, __name, __term, __value) ({ \
             if (__value!=NULL) {                                        \
-                __rtctype(FI_unify_setof(__FI_unify_elem, __type, __mult, __name, __term, (*__value)), __term, __type); \
+                __rtctype(FI_unify_setof(__FI_unify_elem, __type, __mult, __dim, __name, __term, (*__value)), __term, __type); \
             }                                                           \
         })
 
@@ -315,6 +315,9 @@
 	__rtc_FI_get(__getter, __term, *__value);	\
       }							\
     })
+
+#define FI_get_inout_type(__getter, __term, __value)    \
+    FI_get_inout(__getter, __term, __value)
 
 #define FI_unify_inout(__unifier, __term, __value) {	 \
 	if (__value!=NULL) {				 \

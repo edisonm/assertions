@@ -1440,10 +1440,10 @@ ctype_barg_decl(Spec, Mode) -->
      } -> []
     ; "*"
     ),
-    ( {Mode = in}
+    ( {Mode = in}  % Ensure const correctness
     ->" const"
     ; []
-    ). % Ensure const correctness
+    ).
 
 ctype_arg_decl(setof(_, Name, _, _), Mode) -->
     !,
@@ -1681,96 +1681,94 @@ declare_forg_impl(Head, M, Module, Comp, Call, Succ, Glob, Bind, _ImplHead) -->
      "} /* "+PI+" */",
      ""].
 
-c_set_argument(list(S),     _, C, A, L) :- c_set_argument_rec(list, S, C, A, L).
-c_set_argument(array(S, D), _, C, A, L) :- c_set_argument_array(S, D, C, A, L).
-c_set_argument(ptr(S),      _, C, A, L) :- c_set_argument_rec(ptr, S, C, A, L).
-c_set_argument(struct(T),   M, C, A, L) :- c_set_argument_type(M, T, C, A, L).
-c_set_argument(enum(T, _),  M, C, A, L) :- c_set_argument_one(M, T, C, A, L).
-c_set_argument(cdef(T),     M, C, A, L) :- c_set_argument_one(M, T, C, A, L).
-c_set_argument(ntype(_, T), M, C, A, L) :- c_set_argument_one(M, T, C, A, L).
-c_set_argument(chrs(_),     M, C, A, L) :- c_set_argument_chrs(M, C, A, L).
-c_set_argument(string(_),   M, C, A, L) :- c_set_argument_string(M, C, A, L).
-c_set_argument(tdef(_, S),  M, C, A, L) :- c_set_argument(S, M, C, A, L).
-c_set_argument(setof(_, _, S, D), M, C, A, L) :- c_set_argument_setof(M, S, D, C, A, L).
-c_set_argument(term,        _, C, A, "__rtcheck(PL_unify("+A+", "+C+"))").
+enum_name(enum(Name, _), Name).
 
-c_set_argument_one(out,   Type, CArg, Arg, "__rtc_FI_unify("+Type+", "+Arg+", "+CArg+")").
-c_set_argument_one(inout, Type, CArg, Arg, "FI_unify_inout("+Type+", "+Arg+", "+CArg+")").
+c_get_argument(T, M, C, A, L) :- c_argument(T, get, M, C, A, L).
 
-c_set_argument_type(out,   Type, CArg, Arg, "__rtc_FI_unify("+Type+", "+Arg+", &"+CArg+")").
-c_set_argument_type(inout, Type, CArg, Arg, "FI_unify_inout_type("+Type+", "+Arg+", "+CArg+")").
+c_set_argument(T, M, C, A, L) :- c_argument(T, set, M, C, A, L).
 
-c_set_argument_chrs(out,   CArg, Arg, "__rtc_FI_unify(chrs, "+Arg+", "+CArg+")").
-c_set_argument_chrs(inout, CArg, Arg, "FI_unify_inout_chrs("+Arg+", "+CArg+")").
+c_argument(list(S),     G, M, C, A, L) :- c_argument_rec(G, M, list, S, C, A, L).
+c_argument(array(S, D), G, _, C, A, L) :- c_argument_array(G, S, D, C, A, L).
+c_argument(ptr(S),      G, M, C, A, L) :- c_argument_rec(G, M, ptr,  S, C, A, L).
+c_argument(struct(T),   G, M, C, A, L) :- c_argument_type(G, M, T, C, A, L).
+c_argument(enum(T, _),  G, M, C, A, L) :- c_argument_one(G, M, T, C, A, L).
+c_argument(cdef(T),     G, M, C, A, L) :- c_argument_one(G, M, T, C, A, L).
+c_argument(ntype(_, T), G, M, C, A, L) :- c_argument_one(G, M, T, C, A, L).
+c_argument(chrs(_),     G, M, C, A, L) :- c_argument_chrs(G, M, C, A, L).
+c_argument(string(_),   G, M, C, A, L) :- c_argument_string(G, M, C, A, L).
+c_argument(tdef(_, S),  G, M, C, A, L) :- c_argument(S, G, M, C, A, L).
+c_argument(setof(_, _, S, D), G, M, C, A, L) :- c_argument_setof(G, M, S, D, C, A, L).
+c_argument(term,        G, _, C, A, L) :- c_argument_term(G, C, A, L).
 
-c_set_argument_string(out,   CArg, Arg, "__rtc_FI_unify(string, "+Arg+", "+CArg+")").
-c_set_argument_string(inout, CArg, Arg, "FI_unify_inout_string("+Arg+", "+CArg+")").
+getset_smode(get, in).
+getset_smode(set, out).
 
-c_set_argument_array(Spec, Dim, CArg, Arg, "FI_unify_array("+L+", "+CDim+", "+Arg+")") :-
+getset_unify(get, get).
+getset_unify(set, unify).
+
+c_argument_rec(GetSet, Mode, Type, Spec, CArg, Arg, L) :-
+    Arg_ = Arg+"_",
+    c_var_name(Arg_, CArg_),
+    getset_smode(GetSet, SMode),
+    getset_unify(GetSet, Unify),
+    c_argument(Spec, GetSet, SMode, CArg_, Arg_, L1),
+    c_argument_rec_2(GetSet, Unify, Mode, Type, CArg, Arg, L1, L).
+
+c_argument_rec_2(get, Unify, Mode, Type, CArg, Arg, L1, "FI_"+Unify+"_"+Mode+"_"+Type+"("+L1+", "+Arg+", "+CArg+")").
+c_argument_rec_2(set, Unify, _,    Type, CArg, Arg, L1, "FI_"+Unify+"_"         +Type+"("+L1+", "+Arg+", "+CArg+")").
+
+c_argument_array(GetSet, Spec, Dim, CArg, Arg, "FI_"+Unify+"_array("+L+", "+CDim+", "+Arg+")") :-
     Arg_ = Arg+"_",
     c_var_name(Arg_, CArg_),
     c_dim(Dim, CDim),
-    c_set_argument(Spec, out, CArg+"["+CArg_+"]", Arg_, L).
+    getset_smode(GetSet, SMode),
+    getset_unify(GetSet, Unify),
+    c_argument(Spec, GetSet, SMode, CArg+"["+CArg_+"]", Arg_, L).
 
-c_set_argument_rec(Type, Spec, CArg, Arg, "FI_unify_"+Type+"("+L+", "+Arg+", "+CArg+")") :-
-    Arg_ = Arg+"_",
-    c_var_name(Arg_, CArg_),
-    c_set_argument(Spec, out, CArg_, Arg_, L).
+c_argument_type(G, M, T, C, A, L) :-
+    getset_unify(G, U),
+    c_argument_type_2(M, U, T, C, A, L).
 
-enum_name(enum(Name, _), Name).
+c_argument_type_2(in,    Unify, Type, CArg, Arg, "__rtc_FI_"+Unify+"("+Type+", "+Arg+", "+CArg+")").
+c_argument_type_2(out,   Unify, Type, CArg, Arg, "__rtc_FI_"+Unify+"("+Type+", "+Arg+", &"+CArg+")").
+c_argument_type_2(inout, Unify, Type, CArg, Arg, "FI_"+Unify+"_inout_type("+Type+", "+Arg+", "+CArg+")").
 
-c_set_argument_setof(Mode, Spec, Dim, CArg, Arg, "FI_unify_"+Mode+"_setof("+L+", "+Type+", "+Mult+", "+Name+", "+Arg+", "+CArg+")") :-
+c_argument_one(G, M, T, C, A, L) :-
+    getset_unify(G, U),
+    c_argument_one_2(M, U, T, C, A, L).
+
+c_argument_one_2(in,    Unify, Type, CArg, Arg, "__rtc_FI_"+Unify+"("+Type+", "+Arg+", "+CArg+")").
+c_argument_one_2(out,   Unify, Type, CArg, Arg, "__rtc_FI_"+Unify+"("+Type+", "+Arg+", "+CArg+")").
+c_argument_one_2(inout, Unify, Type, CArg, Arg, "FI_"+Unify+"_inout("+Type+", "+Arg+", "+CArg+")").
+
+c_argument_chrs(G, M, C, A, L) :-
+    getset_unify(G, U),
+    c_argument_chrs_2(M, U, C, A, L).
+
+c_argument_chrs_2(in,    Unify, CArg, Arg, "__rtc_FI_"+Unify+"(chrs, "+Arg+", "+CArg+")").
+c_argument_chrs_2(out,   Unify, CArg, Arg, "__rtc_FI_"+Unify+"(chrs, "+Arg+", "+CArg+")").
+c_argument_chrs_2(inout, Unify, CArg, Arg, "FI_"+Unify+"_inout_chrs(" +Arg+", "+CArg+")").
+
+c_argument_string(G, M, C, A, L) :-
+    getset_unify(G, U),
+    c_argument_string_2(M, U, C, A, L).
+
+c_argument_string_2(in,    Unify, CArg, Arg, "__rtc_FI_"+Unify+"(string, "+Arg+", "+CArg+")").
+c_argument_string_2(out,   Unify, CArg, Arg, "__rtc_FI_"+Unify+"(string, "+Arg+", "+CArg+")").
+c_argument_string_2(inout, Unify, CArg, Arg, "FI_"+Unify+"_inout_string(" +Arg+", "+CArg+")").
+
+c_argument_setof(GetSet, Mode, Spec, Dim, CArg, Arg, "FI_"+Unify+"_"+Mode+"_setof("+L+", "+Type+", "+Mult+", "+Dim+", "+Name+", "+Arg+", "+CArg+")") :-
     Arg_ = Arg+"_",
     c_var_name(Arg_, CArg_),
     ctype_decl(Spec, Type),
     enum_name(Spec, Name),
     c_dim_mult(Dim, Mult),
-    c_set_argument(Spec, out, CArg_, Arg_, L).
+    getset_unify(GetSet, Unify),
+    getset_smode(GetSet, SMode),
+    c_argument(Spec, GetSet, SMode, CArg_, Arg_, L).
 
-c_get_argument(list(S),     M, C, A, L) :- c_get_argument_rec(M, list, S, C, A, L).
-c_get_argument(array(S, D), _, C, A, L) :- c_get_argument_array(S, D, C, A, L).
-c_get_argument(ptr(S),      M, C, A, L) :- c_get_argument_rec(M, ptr,  S, C, A, L).
-c_get_argument(struct(T),   M, C, A, L) :- c_get_argument_type(M, T, C, A, L).
-c_get_argument(enum(T, _),  M, C, A, L) :- c_get_argument_one(M, T, C, A, L).
-c_get_argument(cdef(T),     M, C, A, L) :- c_get_argument_one(M, T, C, A, L).
-c_get_argument(ntype(_, T), M, C, A, L) :- c_get_argument_one(M, T, C, A, L).
-c_get_argument(chrs(_),     M, C, A, L) :- c_get_argument_chrs(M, C, A, L).
-c_get_argument(string(_),   M, C, A, L) :- c_get_argument_string(M, C, A, L).
-c_get_argument(tdef(_, S),  M, C, A, L) :- c_get_argument(S, M, C, A, L).
-c_get_argument(setof(_, _, S, D), M, C, A, L) :- c_get_argument_setof(M, S, D, C, A, L).
-c_get_argument(term,        _, C, A, "*"+C+"=PL_copy_term_ref("+A+")").
-
-c_get_argument_one(in,    Type, CArg, Arg, "__rtc_FI_get("+Type+", "+Arg+", "+CArg+")").
-c_get_argument_one(inout, Type, CArg, Arg, "FI_get_inout("+Type+", "+Arg+", "+CArg+")").
-
-c_get_argument_type(in,    Type, CArg, Arg, "__rtc_FI_get("+Type+", "+Arg+", "+CArg+")").
-c_get_argument_type(inout, Type, CArg, Arg, "FI_get_inout("+Type+", "+Arg+", "+CArg+")").
-
-c_get_argument_chrs(in,    CArg, Arg, "__rtc_FI_get(chrs, "+Arg+", "+CArg+")").
-c_get_argument_chrs(inout, CArg, Arg, "FI_get_inout_chrs(" +Arg+", "+CArg+")").
-
-c_get_argument_string(in,    CArg, Arg, "__rtc_FI_get(string, "+Arg+", "+CArg+")").
-c_get_argument_string(inout, CArg, Arg, "FI_get_inout_string(" +Arg+", "+CArg+")").
-
-c_get_argument_array(Spec, Dim, CArg, Arg, "FI_get_array("+L+","+CDim+", "+Arg+")") :-
-    Arg_ = Arg+"_",
-    c_var_name(Arg_, CArg_),
-    c_dim(Dim, CDim),
-    c_get_argument(Spec, in, CArg+"["+CArg_+"]", Arg_, L).
-
-c_get_argument_rec(Mode, Type, Spec, CArg, Arg,
-                   "FI_get_"+Mode+"_"+Type+"("+L+", "+Arg+", "+CArg+")") :-
-    Arg_ = Arg+"_",
-    c_var_name(Arg_, CArg_),
-    c_get_argument(Spec, in, CArg_, Arg_, L).
-
-c_get_argument_setof(Mode, Spec, Dim, CArg, Arg,
-                     "FI_get_"+Mode+"_setof("+L+", "+Type+", "+Mult+", "+Dim+", "+Arg+", "+CArg+")") :-
-    Arg_ = Arg+"_",
-    c_var_name(Arg_, CArg_),
-    ctype_decl(Spec, Type),
-    c_dim_mult(Dim, Mult),
-    c_get_argument(Spec, in, CArg_, Arg_, L).
+c_argument_term(get, C, A, "*"+C+"=PL_copy_term_ref("+A+")").
+c_argument_term(set, C, A, "__rtcheck(PL_unify("+A+", "+C+"))").
 
 c_dim_mult(1, single) :- !.
 c_dim_mult(_, vector).
