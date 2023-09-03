@@ -1445,7 +1445,7 @@ ctype_barg_decl(Spec, Mode) -->
     ; []
     ).
 
-ctype_arg_decl(setof(_, Name, _, _), Mode) -->
+ctype_arg_decl(setof(Name, _, _, _), Mode) -->
     !,
     acodes(Name),
     ({member(Mode, [in, out])} -> [] ; "*").
@@ -1499,7 +1499,7 @@ ctype_decl(string(CType))   --> acodes(CType).
 ctype_decl(enum(CType, _))  --> acodes(CType).
 ctype_decl(term)            --> "term_t".
 ctype_decl(tdef(CType, _))  --> acodes(CType).
-ctype_decl(setof(CType, _, _, _)) --> acodes(CType).
+ctype_decl(setof(_, CType, _, _)) --> acodes(CType).
 ctype_decl(cdef(CType))     --> acodes(CType).
 ctype_decl(ntype(CType, _))         --> acodes(CType).
 
@@ -2079,7 +2079,7 @@ match_known_type(setof(Type, A), M, N, Spec, A) -->
           ),
           Dim is (C+ElemSize-1)//ElemSize
         )
-      ->Spec = setof(EName, N, ESpec, Dim)
+      ->Spec = setof(N, EName, ESpec, Dim)
       ; Spec = list(PSpec)
       )
     }.
