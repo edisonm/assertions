@@ -355,8 +355,8 @@ generate_foreign_intf_h(Module, FileImpl_h) -->
      "#include \""+FileImpl_h+"\"",
      "",
      "extern module_t __"+Module+"_impl;"],
-    findall_tp(Module, type_props_nft(gett), declare_type(gett)),
-    findall_tp(Module, type_props_nft(unif), declare_type(unif)),
+    findall_tp(Module, type_props_nf(gett), declare_type(gett)),
+    findall_tp(Module, type_props_nf(unif), declare_type(unif)),
     findall("extern "+Decl+";",
             ( current_foreign_prop(Head, _, Module, _, _, _, _, Dict, FuncName, _, BindName, _, Type),
               apply_dict(Head, Dict),
@@ -423,7 +423,7 @@ generate_foreign_register(Module, Base, InitL) -->
      "    __foreign_generator_idx_call=PL_predicate(\"idx_call\",    2, \"foreign_generator\");",
      "    __"+Module+"     =PL_new_module(PL_new_atom(\""+Module+"\"));",
      "    __"+Module+"_impl=PL_new_module(PL_new_atom(\""+Module+"$impl\"));"],
-    findall_tp(Module, type_props_nft([gett, unif]), define_aux_variables),
+    findall_tp(Module, type_props_nf([gett, unif]), define_aux_variables),
     findall(Line,
             ( current_foreign_prop(_, M, Module, _, _, _, _, _, _, PredName, BindName, Arity, Type),
               write_register_sentence(Type, M, Module, PredName, Arity, BindName, Line))),
@@ -1159,19 +1159,25 @@ declare_type_(dict_end(_, _, _), _, _, _) --> [].
 declare_type_(dict_rec(_, _, _, _, _), _, _, _) --> [].
 
 declare_type(gett, Name, Spec) -->
-    { ( memberchk(Spec, [array(_, _), setof(_, _, _, _)])
-      ->Decl = Name
-      ; Decl = Name+"*"
-      )
-    },
-    ["int FI_get_"+Name+"(root_t __root, term_t, "+Decl+");"].
+    ( {member(Spec, [ntype(_, Type), tdef(Type, _)])}
+    ->["#define FI_get_"+Name+"(__root, __term, __value) FI_get_"+Type+"(__root, __term, __value)"]
+    ; { ( memberchk(Spec, [array(_, _), setof(_, _, _, _)])
+        ->Decl = Name
+        ; Decl = Name+"*"
+        )
+      },
+      ["int FI_get_"+Name+"(root_t __root, term_t, "+Decl+");"]
+    ).
 declare_type(unif, Name, Spec) -->
-    { ( \+ref_type(Spec)
-      ->DRef = Name
-      ; DRef = Name+"*"
-      )
-    },
-    ["int FI_unify_"+Name+"(term_t, "+DRef+" const);"].
+    ( {member(Spec, [ntype(_, Type), tdef(Type, _)])}
+    ->["#define FI_unify_"+Name+"(__term, __value) FI_unify_"+Type+"(__term, __value)"]
+    ; { ( \+ref_type(Spec)
+        ->DRef = Name
+        ; DRef = Name+"*"
+        )
+      },
+      ["int FI_unify_"+Name+"(term_t, "+DRef+" const);"]
+    ).
 
 generate_aux_clauses(Module) -->
     findall_tp(Module, type_props, generate_aux_clauses).
@@ -1696,7 +1702,7 @@ c_argument(cdef(T),     G, M, C, A, L) :- c_argument_one(G, M, T, C, A, L).
 c_argument(ntype(_, T), G, M, C, A, L) :- c_argument_one(G, M, T, C, A, L).
 c_argument(chrs(_),     G, M, C, A, L) :- c_argument_chrs(G, M, C, A, L).
 c_argument(string(_),   G, M, C, A, L) :- c_argument_string(G, M, C, A, L).
-c_argument(tdef(_, S),  G, M, C, A, L) :- c_argument(S, G, M, C, A, L).
+c_argument(tdef(T, _),  G, M, C, A, L) :- c_argument_one(G, M, T, C, A, L).
 c_argument(setof(_, _, S, D), G, M, C, A, L) :- c_argument_setof(G, M, S, D, C, A, L).
 c_argument(term,        G, _, C, A, L) :- c_argument_term(G, C, A, L).
 
@@ -2130,8 +2136,10 @@ type_is_tdef(M, Type, Spec, A) :-
     \+ curr_prop_asr(comp, _, _, Asr),
     bind_type_names(M:Head, TypeMPropLDictL),
     TypeMPropLDictL = [p(Head, [Prop], _)],
+    \+ member(Prop, [dict_t(_, _), setof(_, _)]),
     arg(Arity, Head, A),
-    arg(Arity, Prop, B),
+    functor(Prop, _, PA),
+    arg(PA, Prop, B),
     A==B,
     match_known_type(Prop, M, TName, Spec, A),
     !.
