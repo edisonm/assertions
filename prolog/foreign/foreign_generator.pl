@@ -2136,7 +2136,7 @@ type_is_tdef(M, Type, Spec, A) :-
     \+ curr_prop_asr(comp, _, _, Asr),
     bind_type_names(M:Head, TypeMPropLDictL),
     TypeMPropLDictL = [p(Head, [Prop], _)],
-    \+ member(Prop, [dict_t(_, _), setof(_, _)]),
+    \+ member(Prop, [dict_t(_, _), dict_t(_, _, _), setof(_, _)]),
     arg(Arity, Head, A),
     functor(Prop, _, PA),
     arg(PA, Prop, B),
