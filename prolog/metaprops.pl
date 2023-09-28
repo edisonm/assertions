@@ -49,6 +49,7 @@
            last_prop_failure/1
           ]).
 
+:- use_module(library(apply)).
 :- use_module(library(assertions)).
 :- use_module(library(resolve_calln)).
 :- use_module(library(context_values)).
