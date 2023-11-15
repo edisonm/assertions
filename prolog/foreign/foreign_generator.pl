@@ -61,6 +61,7 @@
 :- use_module(library(thread)).
 :- use_module(library(transpose)).
 :- use_module(library(pairs)).
+:- use_module(library(occurs)).
 :- init_expansors.
 
 :- multifile
@@ -218,11 +219,12 @@ do_generate_wrapper(M, AliasSO, AliasSOPl, File) :-
                  phrase(( add_autogen_note(M),
                           [(:- module(IModule, IntfPIL))],
                           generate_aux_clauses(M),
-                          ["",
-                           (:- use_foreign_library(AliasSO)),
-                           % make these symbols public:
-                           (:- initialization(( shlib:current_library(AliasSO, _, F1, IModule, _),
-                                                open_shared_object(F1, _Handle, [global])), now))],
+                          [ "",
+                            (:- use_foreign_library(AliasSO)),
+                            % make these symbols public:
+                            (:- initialization(( shlib:current_library(AliasSO, _, F1, IModule, _),
+                                                 open_shared_object(F1, _, [global])), now))
+                          ],
                           findall((Head :- Body),
                                   ( member(F/A, IntfPIL),
                                     A > MaxFLIArgs,
