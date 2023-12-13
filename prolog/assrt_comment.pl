@@ -34,6 +34,7 @@
 
 :- module(assrt_comment, []).
 
+:- use_module(library(lists)).
 :- use_module(library(assertions)).
 :- use_module(library(assertions_op)).
 :- use_module(user:library(plprops)).
