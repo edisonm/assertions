@@ -50,6 +50,7 @@
           ]).
 
 :- use_module(library(apply)).
+:- use_module(library(ordsets)).
 :- use_module(library(assertions)).
 :- use_module(library(resolve_calln)).
 :- use_module(library(context_values)).
@@ -202,6 +203,7 @@ compat(Var, _, _) :- var(Var), !.
 compat(M:Goal, D, _) :-
     !,
     compat(Goal, D, M).
+compat(G, _, M) :- ground(G), !, M:G. % this fixes a performance bug if G is big
 compat(A, D, M) :-
     do_resolve_calln(A, B),
     !,
@@ -261,10 +263,10 @@ compat(Term, D, M) :-
 % eventually lead the execution to a failure and backtrack.
 
 compat_1((A; B), D, M) :-
-    ( compat(A, D, M)
-    ; compat(B, D, M)
-    ),
-    !.
+    !,
+    once(( compat(A, D, M)
+         ; compat(B, D, M)
+         )).
 compat_1(@(A, C), D, M) :-
     !,
     compat_1(A, @(M:A, C), D, C, M).
@@ -295,12 +297,14 @@ compat_safe(_ =.. _, _).
 compat_safe(_ is _, _).
 compat_safe(call_cm(_, _, _), _).
 compat_safe(context_module(_), _).
+compat_safe(strip_module(_, _, _), _).
 compat_safe(curr_arithmetic_function(_), _).
 compat_safe(current_predicate(_), _).
 compat_safe(functor(_, _, _), _).
 compat_safe(goal_2(_, _), _).
 compat_safe(prop_asr(_, _, _, _), _).
 compat_safe(static_strip_module(_, _, _, _), _).
+compat_safe(freeze_cohesive_module_rt(_, _, _, _, _, _), _).
 
 do_compat(Goal, data(VarL, _, _)) :-
     term_variables(VarL, VS),
@@ -325,13 +329,20 @@ is_type(Head, M) :-
            once(prop_asr(glob, type(_), _, Asr))
          )).
 
-:- meta_predicate compat_body(0,+,+,+,+).
-
-compat_body(MG, C, V, T, CP) :-
-    clause(MG, Body, Ref),
+compat_body(M, H, C, V, T, CP) :-
+    functor(H, F, A),
+    functor(G, F, A),
+    functor(P, F, A),
+    (   % go right to the clauses with nonvar arguments that matches (if any):
+        clause(M:H, Body, Ref),
+        clause(M:G,    _, Ref),
+        \+ P=@=G
+    *-> true
+    ;   clause(M:H, Body, Ref)
+    ),
     clause_property(Ref, module(S)), % Source module
-    ( predicate_property(MG, transparent),
-      \+ ( predicate_property(MG, meta_predicate(Meta)),
+    ( predicate_property(M:H, transparent),
+      \+ ( predicate_property(M:H, meta_predicate(Meta)),
            arg(_, Meta, Spec),
            '$expand':meta_arg(Spec)
          )
@@ -343,7 +354,7 @@ compat_body(MG, C, V, T, CP) :-
 compat_body(G1, C, M, data(V, T, _)) :-
     qualify_meta_goal(G1, M, C, G),
     prolog_current_choice(CP),
-    compat_body(M:G, C, V, T, CP).
+    compat_body(M, G, C, V, T, CP).
 
 cut_from(CP) :- catch(safe_prolog_cut_to(CP), _, true).
 
