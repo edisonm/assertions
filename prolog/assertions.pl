@@ -229,6 +229,7 @@ add_arg(H, G1, G2, Pos1, Pos2) :-
 % ----------------------- AB C  D    E- -AB--C-----D-----E----- %CDE
 decompose_assertion_body((AB:C=>D  + E), AB, C,    D,    E   ) :- valid_cp(C). %111
 decompose_assertion_body((AB:C=>D is E), AB, C,    D,    E   ) :- valid_cp(C). %111
+% WARNING: Next is ambiguous if AB is a module-qualification, use [Module:Head] => D to deambiguate
 decompose_assertion_body((AB:C=>D     ), AB, C,    D,    true) :- valid_cp(C). %110
 decompose_assertion_body((AB:C     + E), AB, C,    true, E   ) :- valid_cp(C). %101
 decompose_assertion_body((AB:C    is E), AB, C,    true, E   ) :- valid_cp(C). %101
@@ -583,7 +584,7 @@ decompose_assertion_head_(Head, Pos, M, M:Pred, BCp, PCp, BCp, PCp, Cp, Ca, Su, 
     !,
     functor(Head, F, A),
     functor(Pred, F, A),
-    Pos = term_position(_, _, _, _, PosL),
+    ignore(Pos = term_position(_, _, _, _, PosL)),
     decompose_args(PosL, 1, Head, M, Pred, Cp, Ca, Su, Gl).
 decompose_assertion_head_(Head, Pos, M, M:Head, BCp, PCp, BCp, PCp, [], [], [], [], Pos) :-
     atom(Head).
