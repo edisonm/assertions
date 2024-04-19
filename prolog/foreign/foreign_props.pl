@@ -66,6 +66,7 @@
            join_dict_types/6,
            join_type_desc/4]).
 
+:- use_module(library(apply)).
 :- use_module(library(assertions)).
 :- use_module(library(metaprops)).
 :- use_module(library(plprops)).

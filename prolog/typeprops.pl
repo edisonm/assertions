@@ -41,11 +41,12 @@
            arithexpression/1, int/1, rat/1, posint/1
           ]).
 
+:- use_module(library(apply)).
 :- use_module(library(arithmetic)).
+:- use_module(library(occurs)).
 :- use_module(library(neck)).
 :- use_module(library(assertions)).
 :- use_module(library(metaprops)).
-:- use_module(library(apply)).
 :- use_module(library(static_strip_module)).
 :- init_expansors.
 

@@ -50,6 +50,7 @@
           ]).
 
 :- use_module(library(apply)).
+:- use_module(library(occurs)).
 :- use_module(library(ordsets)).
 :- use_module(library(assertions)).
 :- use_module(library(resolve_calln)).
