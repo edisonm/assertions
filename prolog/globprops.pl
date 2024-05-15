@@ -73,6 +73,7 @@
            user_output/2
           ]).
 
+:- use_module(library(lists)).
 :- use_module(library(memfile)).
 :- use_module(library(choicepoints)).
 :- use_module(library(assertions)).
