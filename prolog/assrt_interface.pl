@@ -39,16 +39,16 @@
 :- use_module(library(context_values)).
 :- init_expansors.
 
-% Propagate assertions in an interface to the implementation
-
-assertions:asr_head_prop(in_asr(IM, Head, Asr), IM, Head, Status, Type, Dict, CM, Loc) :-
-    head_prop_asr_intf(Head, IM, Status, Type, Dict, CM, Loc, Asr).
-
 head_prop_asr_intf(Head, IM, Status, Type, Dict, CM, Loc, Asr) :-
     \+ current_context_value(evaluating, true),
     interface:'$implementation'(IM, Interface),
     with_context_value(assertions:asr_head_prop(Asr, Interface, Head, Status, Type, Dict, CM, Loc),
                        evaluating, true).
+
+% Propagate assertions in an interface to the implementation
+
+assertions:asr_head_prop(in_asr(IM, Head, Asr), IM, Head, Status, Type, Dict, CM, Loc) :-
+    head_prop_asr_intf(Head, IM, Status, Type, Dict, CM, Loc, Asr).
 
 assertions:asr_comm(in_asr(IM, Head, Asr), Comm, Loc) :-
     head_prop_asr_intf(Head, IM, _, _, _, _, _, Asr),
