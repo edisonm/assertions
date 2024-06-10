@@ -38,7 +38,7 @@
            any/1, gndstr/1, str/1, struct/1, term/1, char/1, atmel/1, keypair/1,
            sequence/2, negint/1, operator_specifier/1, character_code/1, goal/1,
            mod_qual/1, mod_qual/2, keylist/1, predname/1, constant/1, linear/1,
-           arithexpression/1, int/1, rat/1, posint/1
+           arithexpression/1, int/1, rat/1, posint/1, opts/1, dict/1, metaopts/2
           ]).
 
 :- use_module(library(apply)).
@@ -524,3 +524,52 @@ operator_specifier(xfy).
 operator_specifier(xfx).
 operator_specifier(yf).
 operator_specifier(xf).
+
+% Note: options as defined by the type opts/1 are a subset of the supported
+% options, since it can only handle atomic/unique keys related to single values
+
+:- type opt/1.
+
+opt(A=B) :-
+    atm(A),
+    term(B).
+opt(A-B) :-
+    atm(A),
+    term(B).
+opt(AB) :-
+    nonvar(AB),
+    !,
+    AB =.. [_, _].
+
+:- type opt_eq/1.
+
+opt_eq(A=B) :-
+    atm(A),
+    term(B).
+
+opt_eq(Opt, Opts, [Opt|Opts]) :-
+    opt_eq(Opt),
+    \+ member(Opt, Opts).
+
+:- type dict/1.
+
+dict(D) :-
+    nonvar(D),
+    !,
+    is_dict(D).
+dict(D) :-
+    atm(T),
+    foldl(opt_eq, _, [], O),
+    dict_create(D, T, O).
+
+:- type opts/1.
+
+opts(L) :- list(opt, L).
+opts(D) :- dict(D).
+
+:- type metaopts(1, :opts).
+:- meta_predicate metaopts(1, :).
+
+metaopts(IsMeta, MOpts) :-
+    goal(1, IsMeta),
+    mod_qual(opts, MOpts).
