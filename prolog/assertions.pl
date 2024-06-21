@@ -703,11 +703,11 @@ modedef(goal_in(N,A), _, B, A, Cp,  Ca2,  Su,  Gl, Cp, Ca, Su, Gl, Ca1, Ca) :- p
 modedef(goal_go(N,A), _, B, A, Cp,  Ca,   Su2, Gl, Cp, Ca, Su, Gl, Su1, Su) :- put_prop(A, typeprops:goal(N,B), Su2, Su1).
 modedef(!A,           M, B, A, Cp1, Ca2,  Su,  Gl, Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, M:compound(B),       Ca2, Ca). % May be modified using setarg/3 or nb_setarg/3 (mutable)
 % Ciao Modes:
-modedef(in(A),  M, B, A, Cp,  Ca2, Su,  Gl,  Cp, Ca, Su, Gl, Ca1, Ca) :- put_prop(A, M:ground(B), Ca2, Ca1).
+modedef(in(A),  M, B, A, Cp,  Ca2, Su,  Gl,  Cp, Ca, Su, Gl, Ca1, Ca) :- put_prop(A, M:gnd(B), Ca2, Ca1).
 modedef(out(A), M, B, A, Cp,  Ca2, Su2, Gl,  Cp, Ca, Su, Gl, Su1, Su) :- put_prop(A, M:var(B), Ca2, Ca), put_prop(A, M:gnd(B), Su2, Su1).
 modedef(go(A),  M, B, A, Cp1, Ca,  Su2, Gl,  Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, M:gnd(B), Su2, Su).
 % Additional Modes (See Coding Guidelines for Prolog, Michael A. Covington, 2009):
-modedef(*A,     M, B, A, Cp,  Ca2, Su,  Gl,  Cp, Ca, Su, Gl, Ca1, Ca) :- put_prop(A, M:ground(B), Ca2, Ca1).
+modedef(*A,     M, B, A, Cp,  Ca2, Su,  Gl,  Cp, Ca, Su, Gl, Ca1, Ca) :- put_prop(A, M:gnd(B), Ca2, Ca1).
 modedef(/A,     M, B, A, Cp,  Ca1, Su1, Gl1, Cp, Ca, Su, Gl, Su1, Su) :- put_prop(A, M:var(B), Ca1, Ca), put_prop(A, globprops:nsh(B), Gl1, Gl). % Like '-' but also A don't share with any other argument
 modedef(>A,     _, _, A, Cp,  Ca,  Su1, Gl,  Cp, Ca, Su, Gl, Su1, Su). % Like output but A might be nonvar on entry
 
