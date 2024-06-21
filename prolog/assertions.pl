@@ -649,6 +649,29 @@ do_modedef(A1, PA1, _, _, A1, PA1, Cp1, Ca, Su, Gl, Cp, Ca, Su, Gl, Cp1, Cp).
 
 put_prop(_, Pos, Prop) --> [Prop-Pos].
 
+% NOTE: In M. A. Covington 2009 paper, mode (=) was defined as input that may be
+% var on entry, but in this implementation is different in the sense that is
+% used to say that an input argument doesn't determine the output of the
+% predicate, in practice that means that the program could be refactorized to
+% avoid such input by placing in its body the method that determines its
+% value. For instance, in:
+%
+% :- true pred p(+,-).
+% :- true pred q(+,-).
+% :- true pred r(+,=,-).
+% p(A, B) :- q(A, X), r(A, X, B), ... .
+% q(A, A).
+% r(A, X, B) :- t(A, X, B), ... .
+
+% we can annotate r/3 as r(+,=,-) since the next refactoring over r/3 ---> r'/2
+% doesn't change the semantic of p/2:
+%
+% p(A, B) :- r'(A, B).
+% r'(A, B) :- q(A, X), t(A, X, B).
+
+% In practice this can be used by an optimizer that remembers tabled values of
+% r/3, knowing that we don't need to record the value of the second argument.
+
 % Support for modes are hard-wired here:
 % ISO Modes
 modedef(+A, M, B, A, Cp, Ca1, Su, Gl, Cp, Ca, Su, Gl, Ca2, Ca) :-
@@ -657,10 +680,12 @@ modedef(+A, M, B, A, Cp, Ca1, Su, Gl, Cp, Ca, Su, Gl, Ca2, Ca) :-
     ; Ca1 = Ca2
     ). % A bit confuse hack, Ca1 comes instantiated to optimize the expression
 modedef(-A,   M, B, A, Cp,  Ca2, Su1, Gl,  Cp, Ca, Su, Gl, Su1, Su) :- put_prop(A, M:var(B), Ca2, Ca).
+modedef(=A,   M, B, A, Cp,  Ca1, Su,  Gl,  Cp, Ca, Su, Gl, Ca2, Ca) :- put_prop(A, M:any(B), Ca1, Ca2). % May be var on entry. Added any/1 to remember the mode.
 % Less restrictive - uses further instantiated:
 % modedef(-(A),         _, A, B, Pos, PA, Cp,                       Ca,                Su1,  [(globprops:fi(B))-Pos|Gl], Cp, Ca, Su, Gl, Su1, Su) :- Pos = term_position(_, _, _, _, [PA]).
-modedef(?A,   _, _, A, Cp1, Ca,  Su,  Gl,  Cp, Ca, Su, Gl, Cp1, Cp).
-modedef(@(A), _, B, A, Cp1, Ca,  Su,  Gl1, Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, globprops:nfi(B), Gl1, Gl).
+modedef(?A,   _, _, A, Cp1, Ca,  Su,  Gl,  Cp, Ca, Su, Gl, Cp1, Cp). % Mode not specified. Should not add anything to the properties.
+modedef(@A,   _, B, A, Cp1, Ca,  Su,  Gl1, Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, globprops:nfi(B), Gl1, Gl). % Not furher instantiated
+
 % PlDoc (SWI) Modes
 modedef(:A1, Pos, M, B, A, PA, Cp, Ca1, Su, Gl, Cp, Ca, Su, Gl, Ca2, Ca) :-
     Pos = term_position(From, To, FFrom, FTo, [PA1]),
@@ -683,7 +708,6 @@ modedef(out(A), M, B, A, Cp,  Ca2, Su2, Gl,  Cp, Ca, Su, Gl, Su1, Su) :- put_pro
 modedef(go(A),  M, B, A, Cp1, Ca,  Su2, Gl,  Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, M:gnd(B), Su2, Su).
 % Additional Modes (See Coding Guidelines for Prolog, Michael A. Covington, 2009):
 modedef(*A,     M, B, A, Cp,  Ca2, Su,  Gl,  Cp, Ca, Su, Gl, Ca1, Ca) :- put_prop(A, M:ground(B), Ca2, Ca1).
-modedef(=A,     _, B, A, Cp1, Ca,  Su,  Gl1, Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, globprops:nfi(B), Gl1, Gl). % The state of A is preserved
 modedef(/A,     M, B, A, Cp,  Ca1, Su1, Gl1, Cp, Ca, Su, Gl, Su1, Su) :- put_prop(A, M:var(B), Ca1, Ca), put_prop(A, globprops:nsh(B), Gl1, Gl). % Like '-' but also A don't share with any other argument
 modedef(>A,     _, _, A, Cp,  Ca,  Su1, Gl,  Cp, Ca, Su, Gl, Su1, Su). % Like output but A might be nonvar on entry
 
