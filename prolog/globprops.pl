@@ -50,6 +50,7 @@
            meta_modes/1,
            multi/1,
            nfi/2,
+           mve/2,
            no_choicepoints/1,
            no_exception/1,
            no_exception/2,
@@ -638,6 +639,10 @@ nfi(V, Goal) :-
     ->true
     ; send_comp_rtcheck(Goal, nfi(V), fi(X))
     ).
+
+:- global mve/2.
+
+mve(V, Goal) :- nfi(V, Goal).
 
 %!  fi(Term, :Goal)
 %

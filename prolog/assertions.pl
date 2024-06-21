@@ -680,11 +680,11 @@ modedef(+A, M, B, A, Cp, Ca1, Su, Gl, Cp, Ca, Su, Gl, Ca2, Ca) :-
     ; Ca1 = Ca2
     ). % A bit confuse hack, Ca1 comes instantiated to optimize the expression
 modedef(-A,   M, B, A, Cp,  Ca2, Su1, Gl,  Cp, Ca, Su, Gl, Su1, Su) :- put_prop(A, M:var(B), Ca2, Ca).
-modedef(=A,   M, B, A, Cp,  Ca1, Su,  Gl,  Cp, Ca, Su, Gl, Ca2, Ca) :- put_prop(A, M:any(B), Ca1, Ca2). % May be var on entry. Added any/1 to remember the mode.
 % Less restrictive - uses further instantiated:
 % modedef(-(A),         _, A, B, Pos, PA, Cp,                       Ca,                Su1,  [(globprops:fi(B))-Pos|Gl], Cp, Ca, Su, Gl, Su1, Su) :- Pos = term_position(_, _, _, _, [PA]).
 modedef(?A,   _, _, A, Cp1, Ca,  Su,  Gl,  Cp, Ca, Su, Gl, Cp1, Cp). % Mode not specified. Should not add anything to the properties.
 modedef(@A,   _, B, A, Cp1, Ca,  Su,  Gl1, Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, globprops:nfi(B), Gl1, Gl). % Not furher instantiated
+modedef(=A,   _, B, A, Cp1, Ca,  Su,  Gl1, Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, globprops:mve(B), Gl1, Gl). % Dependent input argument, could be var on entry. Implies @
 
 % PlDoc (SWI) Modes
 modedef(:A1, Pos, M, B, A, PA, Cp, Ca1, Su, Gl, Cp, Ca, Su, Gl, Ca2, Ca) :-
