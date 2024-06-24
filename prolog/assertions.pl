@@ -679,12 +679,12 @@ modedef(+A, M, B, A, Cp, Ca1, Su, Gl, Cp, Ca, Su, Gl, Ca2, Ca) :-
     ->put_prop(A, M:nonvar(B), Ca1, Ca2)
     ; Ca1 = Ca2
     ). % A bit confuse hack, Ca1 comes instantiated to optimize the expression
-modedef(-A,   M, B, A, Cp,  Ca2, Su1, Gl,  Cp, Ca, Su, Gl, Su1, Su) :- put_prop(A, M:var(B), Ca2, Ca).
+modedef(-A,     M, B, A, Cp,  Ca2, Su1, Gl,  Cp, Ca, Su, Gl, Su1, Su) :- put_prop(A, M:var(B), Ca2, Ca).
+modedef(?A,     M, B, A, Cp2, Ca,  Su,  Gl,  Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, M:any(B), Cp2, Cp1). % Mode not specified. Added any/1 to track explicit usage of this one
 % Less restrictive - uses further instantiated:
 % modedef(-(A),         _, A, B, Pos, PA, Cp,                       Ca,                Su1,  [(globprops:fi(B))-Pos|Gl], Cp, Ca, Su, Gl, Su1, Su) :- Pos = term_position(_, _, _, _, [PA]).
-modedef(?A,   _, _, A, Cp1, Ca,  Su,  Gl,  Cp, Ca, Su, Gl, Cp1, Cp). % Mode not specified. Should not add anything to the properties.
-modedef(@A,   _, B, A, Cp1, Ca,  Su,  Gl1, Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, globprops:nfi(B), Gl1, Gl). % Not furher instantiated
-modedef(=A,   _, B, A, Cp1, Ca,  Su,  Gl1, Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, globprops:mve(B), Gl1, Gl). % Dependent input argument, could be var on entry. Implies @
+modedef(@A,     _, B, A, Cp1, Ca,  Su,  Gl1, Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, globprops:nfi(B), Gl1, Gl). % Not furher instantiated
+modedef(=A,     _, B, A, Cp1, Ca,  Su,  Gl1, Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, globprops:mve(B), Gl1, Gl). % Dependent input argument, could be var on entry. Implies @
 
 % PlDoc (SWI) Modes
 modedef(:A1, Pos, M, B, A, PA, Cp, Ca1, Su, Gl, Cp, Ca, Su, Gl, Ca2, Ca) :-
@@ -699,8 +699,8 @@ modedef(:A1, Pos, M, B, A, PA, Cp, Ca1, Su, Gl, Cp, Ca, Su, Gl, Ca2, Ca) :-
       A = M:mod_qual(A1, B),
       PA = term_position(From, To, FFrom, FTo, [PA1, From-From])
     ).
-modedef(goal_in(N,A), _, B, A, Cp,  Ca2,  Su,  Gl, Cp, Ca, Su, Gl, Ca1, Ca) :- put_prop(A, typeprops:goal(N,B), Ca2, Ca1).
-modedef(goal_go(N,A), _, B, A, Cp,  Ca,   Su2, Gl, Cp, Ca, Su, Gl, Su1, Su) :- put_prop(A, typeprops:goal(N,B), Su2, Su1).
+modedef(goal_in(N,A), M, B, A, Cp,  Ca2,  Su,  Gl, Cp, Ca, Su, Gl, Ca1, Ca) :- put_prop(A, M:goal(N,B), Ca2, Ca1).
+modedef(goal_go(N,A), M, B, A, Cp,  Ca,   Su2, Gl, Cp, Ca, Su, Gl, Su1, Su) :- put_prop(A, M:goal(N,B), Su2, Su1).
 modedef(!A,           M, B, A, Cp1, Ca2,  Su,  Gl, Cp, Ca, Su, Gl, Cp1, Cp) :- put_prop(A, M:compound(B),       Ca2, Ca). % May be modified using setarg/3 or nb_setarg/3 (mutable)
 % Ciao Modes:
 modedef(in(A),  M, B, A, Cp,  Ca2, Su,  Gl,  Cp, Ca, Su, Gl, Ca1, Ca) :- put_prop(A, M:gnd(B), Ca2, Ca1).
