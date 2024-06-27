@@ -642,7 +642,7 @@ nfi(V, Goal) :-
 
 :- global mve/2.
 
-mve(V, Goal) :- nfi(V, Goal).
+mve(_, Goal) :- call(Goal).
 
 %!  fi(Term, :Goal)
 %

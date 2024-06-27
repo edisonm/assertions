@@ -148,9 +148,7 @@ test(assertions_abridged_notation) :-
                                                             Messages),
                                           check, pred, [], _, _),
                  assertions:asr_comm(Idx, "c", _),
-                 assertions:asr_comp(Idx, rt, any(_), _),
                  assertions:asr_comp(Idx, rt, list(message_info, Messages1), _),
-                 assertions:asr_comp(Idx, rt, any(_), _),
                  assertions:asr_comp(Idx, rt, list(message_info, Messages), _),
                  assertions:asr_call(Idx, rt, ctime_t(Time), _),
                  assertions:asr_call(Idx, rt, rtcheck_error(RTCheck), _)]).
