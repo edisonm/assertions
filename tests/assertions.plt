@@ -72,7 +72,7 @@ test(assertions_sugar) :-
                   a, Dict,
                   (pred atomic_list_concat/2:: list(ground) * atom
                    :  list(atom)   * term
-                                     => list(atom)   * atom
+                   => list(atom)   * atom
                       +  (is_det, iso) # "Write live comments here"), _,
                   Records, _),
     assertion(Records=[assertions:asr_head_prop(Idx, a, atomic_list_concat(A, B), check, (pred), Dict, _, _),

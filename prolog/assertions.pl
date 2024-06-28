@@ -463,17 +463,35 @@ report_must_not_be_empty(Type, Pos, Section-Prop) :-
     ; true
     ).
 
-combine_pi_comp(N, Head, PosL1, PosL, BCp, PCp) :-
-    cleanup_parentheses(PCp, Pos),
-    combine_pi_comp_(N, Head, PosL1, PosL, BCp, Pos).
+combine_arg_comp(N, Head, CompArgL, ArgPosL, PosL, BCp, PCp) :-
+    cleanup_parentheses(PCp, CompPos),
+    combine_arg_comp_(N, Head, CompArgL, ArgPosL, PosL, BCp, CompPos).
 
-combine_pi_comp_(N1, Head, PosL1, PosL, (H * P), term_position(_, _, _, _, [TPos, Pos])) :-
-    arg(N1, Head, P),
+combine_arg(Comp, Arg, Comp:Arg).
+
+combine_pos(CPos, APos, term_position(_, _, _, _, [CPos, APos])).
+
+combine_arg_comp_(_, Head, CompArgL, ArgPosL, PosL, CompL, list_position(_, _, CompPosL, _)) :-
+    is_list(CompL),
+    !,
+    Head =.. [_|ArgL],
+    maplist(combine_arg, CompL, ArgL, CompArgL),
+    maplist(combine_pos, CompPosL, ArgPosL, PosL).
+combine_arg_comp_(N, Head, CompArgL, ArgPosL, PosL, BCp, Pos) :-
+    combine_arg_comp_(N, Head, [], CompArgL, ArgPosL, [], PosL, BCp, Pos).
+
+combine_arg_comp_(N1, Head, CompArgL1, CompArgL, [APos|ArgPosL], PosL1, PosL, (H * Comp), term_position(_, _, _, _, [TCp, CPos])) :-
+    arg(N1, Head, Arg),
     !,
     succ(N, N1),
-    combine_pi_comp(N, Head, [Pos|PosL1], PosL, H, TPos).
-combine_pi_comp_(N, Head, PosL, [Pos|PosL], P, Pos) :-
-    arg(N, Head, P).
+    cleanup_parentheses(TCp, TPos),
+    combine_arg(Comp, Arg, CompArg),
+    combine_pos(CPos, APos, Pos),
+    combine_arg_comp_(N, Head, [CompArg|CompArgL1], CompArgL, ArgPosL, [Pos|PosL1], PosL, H, TPos).
+combine_arg_comp_(1, Head, CompArgL, [CompArg|CompArgL], [APos], PosL, [Pos|PosL], Comp, CPos) :-
+    arg(1, Head, Arg),
+    combine_arg(Comp, Arg, CompArg),
+    combine_pos(CPos, APos, Pos).
 
 % EMM: Support for grouped properties
 
@@ -546,39 +564,42 @@ decompose_assertion_head_(M:H, _, P, BCp1, BCp, Cp, Ca, Su, Gl, RP) :-
     atom(M),
     !,
     decompose_assertion_head(H, M, P, BCp1, BCp, Cp, Ca, Su, Gl, RP).
-decompose_assertion_head_(F/A, HPos, M, M:Pred, BCp1, PCp1, BCp, PCp, Cp, Ca, Su, Gl, Pos) :-
+decompose_assertion_head_(F/A, HPos, M, P, BCp1, PCp1, BCp, PCp, Cp, Ca, Su, Gl, Pos) :-
     !,
     atom(F),
     integer(A),
     functor(Head, F, A),
-    ( once(( BCp1 = CM:BCp2,
-             PCp1 = term_position(_, _, _, _, [_, PCp2])
-           ; BCp1 = BCp2,
-             PCp1 = PCp2,
-             CM = M
-           )),
-      BCp2 \= true,
-      combine_pi_comp(A, Head, [], PosL, BCp2, PCp2)
-    ->( nonvar(HPos)
-      ->HPos = term_position(From, To, _, _, [FPos, APos]),
-        ( nonvar(FPos)
-        ->arg(1, FPos, FFrom),
-          arg(2, FPos, FTo)
-        ; true
-        )
+    ( nonvar(HPos)
+    ->HPos = term_position(From, To, _, _, [FPos, _]),
+      ( nonvar(FPos)
+      ->arg(1, FPos, FFrom),
+        arg(2, FPos, FTo)
       ; true
-      ),
-      decompose_assertion_head_(Head, term_position(From, To, FFrom, FTo, PosL), CM,
-                                CM:Pred, true, APos, BCp, PCp, Cp, Ca, Su, Gl, Pos)
-    ; Pred = Head,
-      Cp = [],
-      Ca = [],
-      Su = [],
-      Gl = [],
-      HPos = Pos,
-      BCp = BCp1,
-      PCp = PCp1
-    ).
+      )
+    ; true
+    ),
+    decompose_assertion_head_(Head, term_position(From, To, FFrom, FTo, _), M, P, BCp1, PCp1, BCp, PCp, Cp, Ca, Su, Gl, Pos).
+decompose_assertion_head_(Head, HPos, M, M:Pred, BCp1, PCp1, BCp, _, Cp, Ca, Su, Gl, Pos) :-
+    compound(Head),
+    once(( BCp1 = CM:BCp2,
+           PCp1 = term_position(_, _, _, _, [_, PCp2])
+         ; BCp1 = BCp2,
+           PCp1 = PCp2,
+           CM = M
+         )),
+    BCp2 \= true,
+    functor(Head, F, A),
+    combine_arg_comp(A, Head, CompArgL, ArgPosL, PosL, BCp2, PCp2),
+    !,
+    NHead =.. [F|CompArgL],
+    ( nonvar(HPos)
+    ->HPos = term_position(From, To, FFrom, FTo, ArgPosL)
+    ; true
+    ),
+    Pos = term_position(From, To, FFrom, FTo, PosL),
+    functor(Pred, F, A),
+    BCp = true,
+    decompose_args(PosL, 1, NHead, CM, Pred, Cp, Ca, Su, Gl).
 decompose_assertion_head_(Head, Pos, M, M:Pred, BCp, PCp, BCp, PCp, Cp, Ca, Su, Gl, Pos) :-
     compound(Head),
     !,
@@ -602,7 +623,7 @@ decompose_args([], _, _, _, _, [], [], [], []).
 :- add_termpos(do_modedef(+,?,?,-,?,?,?,?,?,?,?,?,?,?)).
 :- add_termpos(modedef(+,?,?,-,?,?,?,?,?,?,?,?,?,?)).
 :- add_termpos(do_propdef(+,?,?,?,?)).
-:- add_termpos(hpropdef(+,?,?,?,?)).
+:- add_termpos(hpropdef(?,+,?,?,?)).
 
 resolve_types_modes(A,     _, _, A, Cp,  Ca,  Su,  Gl,  Cp, Ca, Su, Gl) :- var(A), !.
 resolve_types_modes(A1, PPos, M, A, Cp1, Ca1, Su1, Gl1, Cp, Ca, Su, Gl) :-
@@ -621,7 +642,7 @@ resolve_types_modes_(A1, M, A, Cp1, Ca1, Su1, Gl1, Cp, Ca, Su, Gl) :-
 
 do_propdef(A,  _, A, Cp,  Cp) :- var(A), !.
 do_propdef(A1, M, A, Cp1, Cp) :-
-    hpropdef(A1, M, A, Cp1, Cp).
+    hpropdef(M, A1, A, Cp1, Cp).
 
 do_modedef(A1, M, A, A2, Cp1, Ca1, Su1, Gl1, Cp, Ca, Su, Gl, Pr1, Pr) :-
     nonvar(A1),
@@ -722,10 +743,11 @@ modedef(/A,     M, B, A, Cp,  Ca1, Su1, Gl1, Cp, Ca, Su, Gl, Su1, Su) :- put_pro
 prolog:error_message(assertion(il_formed_assertion, Term)) -->
     [ 'Il formed assertion, check term ~w'-[Term]].
 
-hpropdef(A1, PA1, M, A, Cp1, Cp) :-
+hpropdef(M, A1, PA1, A, Cp1, Cp) :-
     term_variables(A1, V),
-    ( member(X, V), X==A ->
-      Cp1 = [(M:A1)-PA1|Cp]
+    ( member(X, V),
+      X==A
+    ->Cp1 = [(M:A1)-PA1|Cp]
     ; aprops_arg(A1, M, A, PA1, Cp1, Cp)
     ).
 
@@ -733,18 +755,26 @@ apropdef_2(0, _, _, _, _) --> !, {fail}.
 apropdef_2(N, Head, M, A, PPos) -->
     {cleanup_parentheses(PPos, Pos)},
     !,
-    apropdef_2_(N, Head, M, A, Pos).
+    apropdef_3(N, Head, M, A, Pos).
 
-apropdef_2_(1, Head, M, A, APos) -->
-    {arg(1, Head, V)},
+apropdef_3(_,  Head, M, AL, list_position(_, _, PosL, _)) -->
+    {is_list(AL)},
     !,
-    hpropdef(A, APos, M, V).
-apropdef_2_(N1, Head, M, (P * A), term_position(_, _, _, _, [PPos, APos])) -->
+    {Head =.. [_|VL]},
+    foldl(hpropdef(M), AL, PosL, VL).
+apropdef_3(N, Head, M, A, Pos) -->
+    apropdef_4(N, Head, M, A, Pos).
+
+apropdef_4(N1, Head, M, (P * A), term_position(_, _, _, _, [PPos, APos])) -->
     {arg(N1, Head, V)},
     !,
     {succ(N, N1)},
-    apropdef_2(N, Head, M, P, PPos),
-    hpropdef(A, APos, M, V).
+    {cleanup_parentheses(PPos, Pos)},
+    apropdef_4(N, Head, M, P, Pos),
+    hpropdef(M, A, APos, V).
+apropdef_4(1, Head, M, A, APos) -->
+    {arg(1, Head, V)},
+    hpropdef(M, A, APos, V).
 
 apropdef(Var, _, _, _) --> {var(Var), !, fail}.
 apropdef(_:Head, M, A, APos) -->
