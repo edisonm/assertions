@@ -43,7 +43,7 @@
 :- use_module(library(atomics_atom)).
 :- use_module(library(codegen)).
 :- use_module(library(call_ref)).
-:- use_module(library(camel_snake)).
+:- use_module(library(caseconv)).
 :- use_module(library(extend_args)).
 :- use_module(library(extra_messages)).
 :- use_module(library(foldil)).
@@ -643,10 +643,10 @@ implement_type_getter(func_rec(SubType, N, Term, Name), Spec, Arg) -->
       line_atom(Suff, TName),
       format(atom(CRecordName), "~w.~w", [TName, Arg]),
       format(atom(TNameArg), "~w_~w", [TName, Arg]),
-      camel_snake(PRecordName, TNameArg),
+      pascal_snake(PRecordName, TNameArg),
       Indent = "        "
     ; CRecordName = Arg,
-      camel_snake(PRecordName, Arg),
+      pascal_snake(PRecordName, Arg),
       Indent = "    "
     },
     { func_pcname(Name, PName, CName),
@@ -762,7 +762,7 @@ func_pcname(NameL, PName, CName) :-
     ->atomic_list_concat(NameL, Name)
     ; Name = NameL
     ),
-    camel_snake(PName, Name),
+    pascal_snake(PName, Name),
     c_var_name(Name, CName).
 
 type_char(Type, Char) :- char_type(Char, Type).
@@ -864,10 +864,10 @@ type_unifiers_elem_names(SubType, Term, Name, Arg, Indent, PName, CNameArg, PNam
       line_atom(Suff, TName),
       format(atom(CRecordName), "~w.~w", [TName, Arg]),
       format(atom(TNameArg), "~w_~w", [TName, Arg]),
-      camel_snake(PRecordName, TNameArg),
+      pascal_snake(PRecordName, TNameArg),
       Indent = "        "
     ; CRecordName = Arg,
-      camel_snake(PRecordName, Arg),
+      pascal_snake(PRecordName, Arg),
       ( SubType = union_type
       ->Indent = "        "
       ; Indent = "    "
@@ -944,7 +944,7 @@ implement_type_unifier_ini(PName, CName, Name, Spec) -->
     ["int FI_unify_"+Name+"(term_t "+PName+", "+Name+DRef+" const "+CName+Suff+") {"].
 
 apply_name(Name=Value) :-
-    camel_snake(Name, Arg),
+    pascal_snake(Name, Arg),
     ignore(Value=Arg).
 
 apply_dict(Head, Dict) :-
