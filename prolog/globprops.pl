@@ -39,8 +39,8 @@
            dupclauses/1,
            equiv/2,
            eval/1,
-           exception/1,
-           exception/2,
+           has_exception/1,
+           has_exception/2,
            fails/1,
            failure/1,
            fi/2,
@@ -68,8 +68,8 @@
            signal/2,
            signals/2,
            solutions/2,
-           throw/2,
-           throws/2,
+           throws_ex/2,
+           throws_exs/2,
            unknown/1,
            user_output/2
           ]).
@@ -184,7 +184,7 @@ multi(Goal, Prop) :-
       fail
     ),
     prolog_current_choice(C1),
-    test_throw_2(Goal, Prop, _, true),
+    test_throws_2(Goal, Prop, _, true),
     prolog_current_choice(C2),
     ( C1 == C2
     ->!
@@ -217,7 +217,7 @@ fails(Goal) :- failure(Goal, fails).
 
 failure(Goal, Prop) :-
     Solved = solved(no),
-    test_throw_2(Goal, Prop, _, true),
+    test_throws_2(Goal, Prop, _, true),
     ( arg(1, Solved, no)
     ->send_comp_rtcheck(Goal, Prop, not_fails),
       nb_setarg(1, Solved, yes)
@@ -517,41 +517,41 @@ no_signal(Signal, Goal) :-
     ; true
     ).
 
-%!  exception(:Goal)
+%!  has_exception(:Goal)
 %
 %   Goal throws an exception.
 
-:- global exception/1.
+:- global has_exception/1.
 
-exception(Goal) :- Goal, send_comp_rtcheck(Goal, exception, no_exception).
+has_exception(Goal) :- Goal, send_comp_rtcheck(Goal, has_exception, no_exception).
 
-%!  throw(Exception, :Goal)
+%!  throws_ex(Exception, :Goal)
 %
-%   Goal throws an exception that unifies with Exception
+%   Goal can throw an exception that unifies with Exception
 
-:- global throw/2.
-throw(E, Goal) :- test_throw_2(Goal, throw(E), F, F \= E).
+:- global throws_ex/2.
+throws_ex(E, Goal) :- test_throws_2(Goal, throw(E), F, F \= E).
 
-:- meta_predicate test_throw_2(0, ?, ?, 0).
-test_throw_2(Goal, Prop, F, Test) :-
+:- meta_predicate test_throws_2(0, ?, ?, 0).
+test_throws_2(Goal, Prop, F, Test) :-
     catch(Goal, F,
           ( ( F \= assrchk(_),
               Test
-            ->send_comp_rtcheck(Goal, Prop, exception(F))
+            ->send_comp_rtcheck(Goal, Prop, has_exception(F))
             ; true
             ),
             throw(F)
           )).
 
-%!  exception(Exception, :Goal)
+%!  has_exception(Exception, :Goal)
 %
 %   Goal throws an exception that unifies with Exception
 
-:- global exception(E, Goal) + equiv(exception(throw(E, Goal))).
+:- global has_exception(E, Goal) + equiv(has_exception(throws_ex(E, Goal))).
 
-exception(E, Goal) :-
-    test_throw_2(Goal, exception(E), F, F \= E),
-    send_comp_rtcheck(Goal, exception(E), no_exception).
+has_exception(E, Goal) :-
+    test_throws_2(Goal, has_exception(E), F, F \= E),
+    send_comp_rtcheck(Goal, has_exception(E), no_exception).
 
 %!  no_exception(:Goal)
 %
@@ -559,7 +559,7 @@ exception(E, Goal) :-
 
 :- global no_exception/1.
 
-no_exception(Goal) :- test_throw_2(Goal, no_exception, _, true).
+no_exception(Goal) :- test_throws_2(Goal, no_exception, _, true).
 
 %!  no_exception(Exception, :Goal)
 %
@@ -567,16 +567,16 @@ no_exception(Goal) :- test_throw_2(Goal, no_exception, _, true).
 
 :- global no_exception/2.
 
-no_exception(E, Goal) :- test_throw_2(Goal, no_exception(E), F, \+F \= E).
+no_exception(E, Goal) :- test_throws_2(Goal, no_exception(E), F, \+F \= E).
 
-%!  throws(Exceptions:List, :Goal)
+%!  throws_exs(Exceptions:List, :Goal)
 %
 %   Goal can only throw the exceptions that unify with the elements of
 %   Exceptions
 
-:- global throws/2.
+:- global throws_exs/2.
 
-throws(EL, Goal) :- test_throw_2(Goal, throws(EL), F, \+memberchk(F, EL)).
+throws_exs(EL, Goal) :- test_throws_2(Goal, throws_exs(EL), F, \+memberchk(F, EL)).
 
 %!  signals(Signals:List, :Goal)
 %
