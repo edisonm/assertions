@@ -42,6 +42,7 @@
            asr_aprop/4,
            aprop_asr/4,
            prop_asr/4,
+           prop_asr/5,
            prop_asr/7,
            current_decomposed_assertion_1/12,
            decompose_assertion_head_body/13]).
@@ -159,10 +160,14 @@ match_modules(_, M, M) :- !.
 match_modules(H, M, IM) :- predicate_property(M:H, implementation_module(IM)).
 
 :- meta_predicate
-       prop_asr(?, 0, +, +),
-       aprop_asr(?, 0, +, +).
+       prop_asr(?, 0, -, -),
+       prop_asr(?, 0, -, -, -),
+       aprop_asr(?, 0, -, -).
 
 prop_asr(Key, M:P, From, Asr) :-
+    prop_asr(Key, M:P, _, From, Asr).
+
+prop_asr(Key, M:P, C, From, Asr) :-
     curr_prop_asr(Key, C:P, From, Asr),
     predicate_property(C:P, implementation_module(IM)),
     match_modules(P, M, IM).
