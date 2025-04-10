@@ -204,7 +204,10 @@ compat(Var, _, _) :- var(Var), !.
 compat(M:Goal, D, _) :-
     !,
     compat(Goal, D, M).
-compat(G, _, M) :- ground(G), !, M:G. % this fixes a performance bug if G is big
+compat(G, _, M) :-
+    ground(G),
+    !,
+    M:G. % this fixes a performance bug if G is big
 compat(A, D, M) :-
     do_resolve_calln(A, B),
     !,
@@ -247,6 +250,10 @@ compat(var(V), _, _) :-
     nonvar(V),
     !,
     fail.
+compat(mod_qual(T, A), D, M) :-
+    !,
+    strip_module(M:A, C, V),
+    with_cv_module(compat(type(T, V), D, M), C).
 compat(A, data(VarL, _, _), M) :-
     % This clause allows usage of simple test predicates as compatibility check
     compound(A),
@@ -321,11 +328,11 @@ del_freeze(Var) :-
     ).
 
 is_prop(Head, M) :-
-    prop_asr(Head, M, Stat, prop, _, _, _),
+    prop_asr(Head, M, Stat, prop, _, _, _, _),
     memberchk(Stat, [check, true]).
 
 is_type(Head, M) :-
-    once(( prop_asr(Head, M, Stat, prop, _, _, Asr),
+    once(( prop_asr(Head, M, Stat, prop, _, _, _, Asr),
            memberchk(Stat, [check, true]),
            once(prop_asr(glob, type(_), _, Asr))
          )).
@@ -362,6 +369,13 @@ cut_from(CP) :- catch(safe_prolog_cut_to(CP), _, true).
 freeze_cut(CP, V) :-
     freeze(V, catch(prolog_cut_to(CP), _, true)).
 
+compatc(H, VarL, _) :-
+    compatc_arg(H, A),
+    ( var(A)
+    ->ord_intersect(VarL, [A], [A])
+    ; true
+    ),
+    !.
 compatc(H, VarL, M) :-
     functor(H, _, N),
     arg(N, H, A),
@@ -377,14 +391,10 @@ compatc(H, VarL, M) :-
       ->var(Y),
         ord_intersect(VarL, [Y], [Y])
       )
+    ; predicate_property(M:H, built_in),
+      M:H
     ),
     !.
-compatc(H, VarL, _) :-
-    compatc_arg(H, A),
-    ( var(A)
-    ->ord_intersect(VarL, [A], [A])
-    ; true
-    ).
 
 %!  compatc_arg(+Call, Arg) is semidet
 %
@@ -396,7 +406,7 @@ compatc_arg(nonvar(   A), A).
 compatc_arg(term(     A), A).
 compatc_arg(gnd(      A), A).
 compatc_arg(ground(   A), A).
-compatc_arg(nonground(A), A).
+compatc_arg(nonground(A, _), A).
 
 freeze_fail(CP, Term, V, N) :-
     freeze(V, ( prolog_cut_to(CP),

@@ -43,7 +43,7 @@
            aprop_asr/4,
            prop_asr/4,
            prop_asr/5,
-           prop_asr/7,
+           prop_asr/8,
            current_decomposed_assertion_1/12,
            decompose_assertion_head_body/13]).
 
@@ -151,7 +151,7 @@ curr_prop_asr(glob, M:P, From, Asr) :- asr_glob(Asr, M, P, From).
 
 :- multifile asr_aprop/4.
 
-prop_asr(H, M, Stat, Type, Dict, From, Asr) :-
+prop_asr(H, M, Stat, Type, Dict, IM, From, Asr) :-
     asr_head_prop(Asr, C, H, Stat, Type, Dict, _, From),
     predicate_property(C:H, implementation_module(IM)),
     match_modules(H, M, IM).

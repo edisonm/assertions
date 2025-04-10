@@ -495,7 +495,7 @@ add_dict(Dict, Prop=Type) --> [Type-[t(Type, [Prop], [], Dict)]].
 match_unknown_type(M, Name, Prop) --> match_type(Prop, M, unknown, Name, _, _), !.
 
 is_type(CM, Head) :-
-    once(( prop_asr(Head, CM, check, prop, _, _, Asr),
+    once(( prop_asr(Head, CM, check, prop, _, _, _, Asr),
            once(prop_asr(glob, type(_), _, Asr))
          )).
 
