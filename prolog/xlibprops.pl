@@ -42,7 +42,5 @@
 
 :- pred normalize_head(:predname, goal).
 :- pred normalize_head(:callable, goal).
-:- pred normalize_head(+, -).
-:- pred normalize_head(-, -).
 
 :- pred qualify_meta_goal(0, -goal).
