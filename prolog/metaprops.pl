@@ -326,6 +326,7 @@ compat_safe(call_cm(_, _, _), _).
 compat_safe(context_module(_), _).
 compat_safe(strip_module(_, _, _), _).
 compat_safe(curr_arithmetic_function(_), _).
+compat_safe(term_variables(_, _), _).
 compat_safe(current_predicate(_), _).
 compat_safe(functor(_, _, _), _).
 compat_safe(freeze(_, _), _).
