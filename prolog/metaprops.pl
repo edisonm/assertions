@@ -270,6 +270,7 @@ compat(with_cv_module(A, C), D, M) :-
     !,
     with_cv_module(compat(A, D, M), C).
 compat(mod_qual(T, A), D, M) :-
+    nonvar(A),
     !,
     strip_module(M:A, C, V),
     with_cv_module(compat(type(T, V), D, M), C).
