@@ -134,7 +134,7 @@ unfold_calls:unfold_call_hook(type(T, A), metaprops, M, M:call(T, A)).
 compat(M:Goal) :-
     functor(Goal, _, A),
     arg(A, Goal, Last),
-    \+ \+ compat(Goal, [Last], M).
+    \+ \+ compat(M:Goal, [Last]).
 
 :- thread_local
         '$last_prop_failure'/2.
@@ -286,10 +286,10 @@ compat_1(A, D, M) :-
     compat_1(A, M:A, D, M, M).
 
 compat_1(A, G, D, C, M) :-
-    D = data(V, _, _),
-    compat_1(V, A, G, D, C, M).
+    D = data(V, T, _),
+    compat_1(V, T, A, G, C, M).
 
-compat_1(V, A, G, D, C, M) :-
+compat_1(V, T, A, G, C, M) :-
     term_variables(A, AU), sort(AU, AVars),
     term_variables(V, TU), sort(TU, TVars),
     ord_intersect(AVars, TVars, Shared),
@@ -301,12 +301,15 @@ compat_1(V, A, G, D, C, M) :-
     ; Shared = []
     ->once(G)
     ; is_type(A, M)
-    ->catch(compat_body(A, C, M, D), _, G)
+    ->functor(A, _, N),
+      arg(N, A, Last),
+      term_variables(Last-V, V2), sort(V2, V3),
+      catch(compat_body(A, C, M, V3, T), _, G)
     ; \+ ( \+ compat_safe(A, M),
            \+ ground(A),
            \+ aux_pred(A),
            \+ is_prop(A, M),
-           print_message(warning, format("While checking compat, direct execution of predicate could cause infinite loops: ~q", [G-D])),
+           print_message(warning, format("While checking compat, direct execution of predicate could cause infinite loops: ~q", [G-T])),
            fail
          ),
       once(G)
@@ -364,7 +367,7 @@ compat_body(M, H, C, V, T, CP) :-
     ),
     compat(Body, data(V, T, CP), CM).
 
-compat_body(G1, C, M, data(V, T, _)) :-
+compat_body(G1, C, M, V, T) :-
     qualify_meta_goal(G1, M, C, G),
     prolog_current_choice(CP),
     compat_body(M, G, C, V, T, CP).
