@@ -325,7 +325,7 @@ list([_|L]) :- list(L).
 
 list(Type, List) :- list_(List, Type).
 
-:- prop list_/2.
+:- type list_/2.
 list_([], _).
 list_([E|L], T) :-
     type(T, E),
