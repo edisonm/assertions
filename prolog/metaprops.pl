@@ -42,6 +42,8 @@
            checkprop_goal/1,
            compat/1,
            compat/2,
+           get_checkprop/1,
+           ncompat/1,
            with_cv_module/2,
            cv_module/1,
            instan/1,
@@ -126,16 +128,6 @@ type(M:T, A, H) :-
 
 unfold_calls:unfold_call_hook(type(T, A), metaprops, M, M:call(T, A)).
 
-:- true prop compat(Prop)
-# "Uses ~w as a compatibility property."-[Prop].
-
-:- meta_predicate compat(0 ).
-
-compat(M:Goal) :-
-    functor(Goal, _, A),
-    arg(A, Goal, Last),
-    \+ \+ compat(M:Goal, [Last]).
-
 :- thread_local
         '$last_prop_failure'/2.
 
@@ -182,10 +174,13 @@ cleanup_prop_failure(T, S) :-
 with_cv_module(Goal, CM) :-
     with_context_value(Goal, current_module, CM).
 
+valid_compat(compat).
+valid_compat(ncompat).
+
 :- meta_predicate checkprop_goal(0 ).
 checkprop_goal(Goal) :-
     ( current_context_value(checkprop, CheckProp)
-    ->CheckProp = compat
+    ->valid_compat(CheckProp)
     ; Goal
     ).
 
@@ -198,15 +193,46 @@ compat1(M:Pred1, Arg) :-
     \+ \+ compat(M:call(Pred1, Arg), Shared).
 */
 
+:- true prop compat(Prop)
+# "Uses ~w as a compatibility property."-[Prop].
+
+get_checkprop(Value) :- current_context_value(checkprop, Value).
+
+:- meta_predicate compat(0).
+
+compat(M:Goal) :-
+    ( functor(Goal, _, A),
+      arg(A, Goal, Last)
+    ->VarL = [Last]
+    ; VarL = []
+    ),
+    \+ \+ compat(M:Goal, VarL).
+
+:- true prop ncompat/1
+   # "Naive version of compat, faster but could fall into infinite loops".
+
+:- meta_predicate ncompat(0).
+
+ncompat(MGoal) :-
+    \+ \+ with_context_value(MGoal, checkprop, ncompat).
+
 :- meta_predicate compat(0, +).
 
-compat(M:Goal, VarL) :-
+compat(MGoal, VarL) :-
+    (   current_context_value(checkprop, ncompat)
+    ->  MGoal
+    ;   (   current_context_value(checkprop, compat)
+        ->  icompat(MGoal, VarL)
+        ;   with_context_value(icompat(MGoal, VarL), checkprop, compat)
+        )
+    ).
+
+icompat(M:Goal, VarL) :-
     copy_term_nat(Goal-VarL, Term-VarTL), % get rid of corroutining while checking compatibility
     sort(VarTL, VS),
     cleanup_prop_failure(Term, []),
     prolog_current_choice(CP),
-    with_context_value(
-        compat(Term, data(VS, Term, CP), M), checkprop, compat).
+    compat(Term, data(VS, Term, CP), M).
 
 % this small interpreter will reduce the possibility of loops if the goal being
 % checked is not linear, i.e., if it contains linked variables:
@@ -232,9 +258,17 @@ compat(type(T, A), D, M) :-
     strip_module(M:T, C, H),
     type(C:H, A, G),
     compat(G, D, C).
-compat(compat(A), D, M) :-
+compat(compat(A), D1, M) :-
     !,
-    compat(A, D, M).
+    strip_module(M:A, _, B),
+    ( functor(B, _, N),
+      arg(N, B, Last)
+    ->D1 = data(VS, Term, CP),
+      D  = data([Last|VS], Term, CP)
+    ; D = D1
+    ),
+    \+ \+ compat(A, D, M).
+    
 compat((A->B; C), D, M) :-
     !,
     (   call(M:A)
@@ -349,11 +383,10 @@ is_type(Head, M) :-
 
 compat_body(M, H, C, V, T, CP) :-
     functor(H, F, A),
-    functor(G, F, A),
     functor(P, F, A),
     (   % go right to the clauses with nonvar arguments that matches (if any):
         clause(M:H, Body, Ref),
-        clause(M:G,    _, Ref),
+        clause(_:G,    _, Ref),
         \+ P=@=G
     *-> true
     ;   clause(M:H, Body, Ref)
