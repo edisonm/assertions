@@ -60,6 +60,7 @@
 :- use_module(library(lists)).
 :- use_module(library(list_sequence)).
 :- use_module(library(prolog_codewalk), []).
+:- after(neck).
 :- init_expansors.
 
 /** <module> Assertion reader for SWI-Prolog
